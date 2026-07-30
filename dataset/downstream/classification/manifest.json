@@ -1,0 +1,23 @@
+{
+  "layout": "dataset/downstream/classification",
+  "files": {
+    "lcmap_hls_classification.npz": "bundled",
+    "lcmap_gse_classification.npz": "bundled",
+    "glancetraining_hls_classification.npz": "bundled",
+    "glancetraining_gse_classification.npz": "bundled",
+    "cdl_hls_classification.npz": "bundled",
+    "cdl_gse_classification.npz": "bundled",
+    "cropharvest_hls_classification.npz": "bundled",
+    "cropharvest_gse_classification.npz": "bundled",
+    "globaltree_hls_classification.npz": "bundled",
+    "globaltree_gse_classification.npz": "bundled"
+  },
+  "hls_composite_nc": [
+    "lcmap_hls_classification_processed.nc",
+    "glancetraining_hls_classification_processed.nc",
+    "globaltree_hls_classification_processed.nc",
+    "cdl_hls_classification_processed.nc",
+    "cropharvest_hls_classification_processed.nc"
+  ],
+  "notes": "Primary probe inputs are under hls_composite_nc/. NPZ files provide lon/lat (and GSE/AlphaEarth features)."
+}

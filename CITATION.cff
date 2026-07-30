@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+title: "Temporal Earth Distillation (TED)"
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - family-names: "Contributors"
+    given-names: "TED"
+abstract: >-
+  Self-supervised pretraining for HLS satellite time series with Temporal Earth
+  Distillation (TED), Masked Spectral Modeling (MSM), and Next-Token Prediction
+  (NTP), plus downstream land-cover classification evaluation.
+keywords:
+  - remote sensing
+  - time series
+  - self-supervised learning
+  - HLS
+  - land cover
+license: MIT
+preferred-citation:
+  type: generic
+  title: "Temporal Earth Distillation"
+  authors:
+    - family-names: "Contributors"
+      given-names: "TED"
+  year: 2026

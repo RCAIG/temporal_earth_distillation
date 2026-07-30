@@ -1,0 +1,60 @@
+# Local / env
+__pycache__/
+*.py[cod]
+.Python
+.venv/
+venv/
+.env
+.env.*
+
+# Do not track binary or log artifacts under scripts (shell + py only policy)
+scripts/**/*.tar.gz
+scripts/**/*.gz
+scripts/**/*.pyc
+scripts/**/*.out
+scripts/**/*.err
+scripts/**/*.txt
+
+# Training / data artifacts (do not push to GitHub)
+logs/
+checkpoints/
+# Ignore HLS pretrain blobs under dataset/, but keep the Python package ``data/``
+dataset/**/*.nc
+dataset/**/*.h5
+dataset/**/*.npz
+dataset/**/*.npy
+!dataset/**/*.md
+!dataset/**/*.json
+output/
+results/
+loss/
+server_logs/
+*.tar.gz
+*.npz
+.idea/
+_tmp*/
+imputator_hotfix*.tar.gz
+numpy_pip.log
+scaler.npz
+result_imputation.txt
+py_files.tar.gz
+MIGRATION_BUNDLE*.txt
+PACKAGE_TRANSFER_README.txt
+TRANSFER_MANIFEST.txt
+
+# Pretrained zoo: keep config.json / README; ignore large weight blobs
+pretrained/**/pytorch_model.bin
+pretrained/**/*.pth
+pretrained/**/*.safetensors
+!pretrained/**/config.json
+!pretrained/**/README.md
+!pretrained/README.md
+
+# Editor / accidental backups next to tracked sources
+*.bak_global_shift
+
+# Duplicate snapshots / nested copies of this repo (keep root paths only)
+TimeSeries_SSL_USA/
+analysis/TimeSeries_SSL_USA_all_py*/
+relation_condition_changed_py*/
+bundle_*/

@@ -1,0 +1,2 @@
+# Optional extras (not required for TED/MSM/NTP train or linear/kNN eval)
+pyproj>=3.5
