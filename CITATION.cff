@@ -6,9 +6,9 @@ authors:
   - family-names: "Contributors"
     given-names: "TED"
 abstract: >-
-  Self-supervised pretraining for HLS satellite time series with Temporal Earth
-  Distillation (TED), Masked Spectral Modeling (MSM), and Next-Token Prediction
-  (NTP), plus downstream land-cover classification evaluation.
+  Temporal Earth Distillation for pixel-based satellite imagery time series
+  pre-training (TED, MSM, NTP), plus downstream land-cover classification
+  evaluation.
 keywords:
   - remote sensing
   - time series

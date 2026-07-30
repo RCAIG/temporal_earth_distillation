@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "temporal-earth-distillation"
 version = "0.1.0"
-description = "TED / MSM / NTP self-supervised pretraining and downstream classification for HLS time series"
+description = "Temporal Earth Distillation for pixel-based satellite imagery time series pre-training"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }

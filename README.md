@@ -1,6 +1,6 @@
 # Temporal Earth Distillation (TED)
 
-Self-supervised pretraining for **HLS** time series (**TED**, **MSM**, **NTP**) and paper-aligned downstream land-cover classification evaluation.
+Temporal Earth Distillation for pixel-based satellite imagery time series pre-training (**TED**, **MSM**, **NTP**), with paper-aligned downstream land-cover classification evaluation.
 
 ## Requirements
 
