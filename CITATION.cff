@@ -6,9 +6,9 @@ authors:
   - family-names: "Contributors"
     given-names: "TED"
 abstract: >-
-  Temporal Earth Distillation for pixel-based satellite imagery time series
-  pre-training (TED, MSM, NTP), plus downstream land-cover classification
-  evaluation.
+  Temporal Earth Distillation for pixel-based satellite image time series
+  pre-training, with TED, MSM and NTP recipes plus downstream land-cover
+  classification evaluation.
 keywords:
   - remote sensing
   - time series

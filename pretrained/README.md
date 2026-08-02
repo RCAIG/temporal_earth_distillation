@@ -5,7 +5,7 @@ Hugging Face-style model zoo for paper-aligned full-scale **12b768** checkpoints
 | ID / alias | Family | Released checkpoint | Weights |
 |------------|--------|---------------------|---------|
 | `ted` / `ted-hls-12b768` | Temporal Earth Distillation | paper release | `ted-hls-12b768/pytorch_model.bin` |
-| `msm` / `msm-hls-12b768` | Masked Spectral Modeling | paper baseline | `msm-hls-12b768/pytorch_model.bin` |
+| `msm` / `msm-hls-12b768` | Masked Sequence Modeling | paper baseline | `msm-hls-12b768/pytorch_model.bin` |
 | `ntp` / `ntp-hls-12b768` | Next-Token Prediction | paper baseline | `ntp-hls-12b768/pytorch_model.bin` |
 
 Each folder contains:

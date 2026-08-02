@@ -4,7 +4,7 @@
 set -euo pipefail
 
 REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-BUNDLE="${PRETRAINED_BUNDLE:-/work/projects/resilientia/ziyun/TimeSeries_SSL_USA/reports/fullscale_12b768_best_ep_glance_cropharvest_checkpoint_bundle}"
+BUNDLE="${PRETRAINED_BUNDLE:-${REPO_ROOT}/pretrained_release}"
 
 declare -A SRC=(
   [ted-hls-12b768]="${BUNDLE}/ted-hls-12b768/pytorch_model.bin"

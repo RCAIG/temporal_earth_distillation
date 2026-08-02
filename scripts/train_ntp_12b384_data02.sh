@@ -7,7 +7,7 @@ set -euo pipefail
 REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 cd "$REPO_ROOT"
 
-model_id="${MODEL_ID:-NTP-12b384d6h-data02-noImp-noLonLat-noMissingMaskEmbed-vs05-ep50-ablation}"
+model_id="${MODEL_ID:-ntp-hls-12b384-data02-ablation}"
 log_id="${LOG_ID:-$model_id}"
 model="NTP"
 root_path="${ROOT_PATH:-${REPO_ROOT}/dataset/}"
