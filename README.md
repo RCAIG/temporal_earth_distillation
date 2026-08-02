@@ -1,6 +1,6 @@
 # Temporal Earth Distillation (TED)
 
-Temporal Earth Distillation for pixel-based satellite image time series pre-training, with paper-aligned baselines (**TED**, **MSM**, **NTP**) and downstream land-cover classification evaluation.
+Temporal Earth Distillation for pixel-based satellite image time series pre-training and downstream Earth observation tasks for evaluation.
 
 ![Temporal Earth Distillation overview](docs/figures/figure1_intro_composite_300dpi.jpg)
 

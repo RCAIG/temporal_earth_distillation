@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 class CategoricalStateHead(nn.Module):
     """
-    DINOHead structure optimized per dinov3 source
+    Projection head for categorical state distributions.
     MLP (in_dim -> hidden_dim -> hidden_dim -> bottleneck_dim) -> L2 normalize -> Linear (bottleneck_dim -> out_dim)
     """
     def __init__(
@@ -79,8 +79,3 @@ LayerNorm in feature dimensionnormalize, more suitable for time sequence tasks
         if not no_last_layer:
             x = self.last_layer(x)
         return x
-
-
-# Backward-compatible aliases for older configs/imports.
-DINOHead = CategoricalStateHead
-ProtoHead = CategoricalStateHead

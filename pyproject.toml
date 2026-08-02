@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "temporal-earth-distillation"
 version = "0.1.0"
-description = "Temporal Earth Distillation for pixel-based satellite imagery time series pre-training"
+description = "Temporal Earth Distillation for pixel-based satellite image time series pre-training and downstream Earth observation tasks for evaluation"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }

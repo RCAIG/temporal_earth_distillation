@@ -1262,12 +1262,3 @@ class TEDCriterion(nn.Module):
                         loss_dict[dst] = float(val)
         
         return total_loss, loss_dict
-
-
-# Backward-compatible aliases for older scripts and checkpoints/configs that import the original names.
-SinkhornKnoppTeacher = BalancedCategoricalAssignment
-DINOLoss = SequenceStateLoss
-iBOTPatchLoss = PatchStateLoss
-KoleoLoss = FeatureSpreadLoss
-FFTGramAlignment = FrequencyDomainPatchAlignment
-DINOCriteria = TEDCriterion

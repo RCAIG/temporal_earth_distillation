@@ -8,7 +8,7 @@ from layers.transformer_blocks import AttentionBlock
 from layers.embedding import PositionalEncoding
 from utils.tools import patchify, imputator_sliding_window_overlap
 
-from .heads import DINOHead
+from .heads import CategoricalStateHead
 
 
 def lon_lat_fourier_features(lon_lat_deg: torch.Tensor, n_freqs: int) -> torch.Tensor:
@@ -107,7 +107,7 @@ class Backbone(nn.Module):
         dino_head_hidden_dim = getattr(configs, 'dino_head_hidden_dim', 128)
         dino_head_bottleneck_dim = getattr(configs, 'dino_head_bottleneck_dim', 64)
         dino_head_nlayers = getattr(configs, 'dino_head_nlayers', 1)
-        self.dino_head = DINOHead(
+        self.dino_head = CategoricalStateHead(
             in_dim=self.d_model,
             out_dim=dino_head_n_prototypes,
             hidden_dim=dino_head_hidden_dim,
@@ -119,7 +119,7 @@ class Backbone(nn.Module):
         ibot_head_hidden_dim = getattr(configs, 'ibot_head_hidden_dim', 128)
         ibot_head_bottleneck_dim = getattr(configs, 'ibot_head_bottleneck_dim', 64)
         ibot_head_nlayers = getattr(configs, 'ibot_head_nlayers', 1)
-        self.ibot_head = DINOHead(
+        self.ibot_head = CategoricalStateHead(
             in_dim=self.d_model,
             out_dim=ibot_head_n_prototypes,
             hidden_dim=ibot_head_hidden_dim,
