@@ -692,7 +692,7 @@ parser.add_argument(
     help='TED / MSM / NTP: per-sample raw valid ratio '
     '(~missing_mask_orig.mean) must be >= this to join SSL loss; 0 keeps all samples',
 )
-# Option 2: FFT recon frequency cutoff ratio (RobustFreqLoss.cutoff_ratio)
+# Option 2: FFT alignment frequency-bin cutoff ratio
 
 # Option 3: DINOv3 patch mask block masking ratio (rest random)
 parser.add_argument(

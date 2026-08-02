@@ -124,7 +124,7 @@ class Model(nn.Module):
         
         # 3. Weights (align DINOv3 official config for external loss)
         # keep base values for epoch scheduling during training
-        # Backbone has no decoder: no pixel recon or FFT recon (RobustFreqLoss)
+        # Backbone has no decoder: no pixel or FFT reconstruction loss
         self.lambda_recon = 0.0
         self.lambda_fft_align = getattr(configs, 'lambda_fft_align', 0.05)  # patch representation spectral align (unrelated to FFT recon)
         self.lambda_cls_proto = configs.lambda_cls_proto if hasattr(configs, 'lambda_cls_proto') else 1.0
