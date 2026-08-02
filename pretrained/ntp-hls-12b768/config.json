@@ -1,7 +1,9 @@
 {
   "model_type": "NTP",
-  "architectures": ["NTP"],
-  "model_id": "Patch_NTP_TED-12b768d12h-mag-data10-noLonLat-noMixedBatch-wd5e5-cos10-lr1e5-e80-remote",
+  "architectures": [
+    "NTP"
+  ],
+  "model_id": "ntp-hls-12b768",
   "d_model": 768,
   "n_heads": 12,
   "e_layers": 12,
@@ -16,14 +18,7 @@
   "use_missing_mask_embed": 0,
   "checkpoint_epoch": 25,
   "train_epochs": 80,
-  "job_id": 10685,
-  "selection": {
-    "criterion": "mean BA of GlanceTraining + CropHarvest",
-    "probe": "linear spatial nocap (2:1:1_spatial1280m_grid_prox)",
-    "mean_ba_gc": 0.641604,
-    "glance_ba": 0.783184,
-    "cropharvest_ba": 0.500025
-  },
   "weight_file": "pytorch_model.bin",
-  "torch_dtype": "float32"
+  "torch_dtype": "float32",
+  "release": "paper baseline"
 }

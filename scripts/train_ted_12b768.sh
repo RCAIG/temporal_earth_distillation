@@ -10,7 +10,7 @@ cd "$REPO_ROOT" || {
   exit 1
 }
 
-model_id="${MODEL_ID:-TED-12b768d12h-data10-noImp-wd5e5-proto8192-teacherTemp07-studentTemp01-mom992-koleo010decay-noLonLat-noMissingMaskEmbed-evidenceGapRatioPosGate-alpha01-v25-indepFS-shortsFullSeq-multiT-ratio025to075-crop4rand2-mixedBatch-remote-cXattnB}"
+model_id="${MODEL_ID:-ted-hls-12b768}"
 log_id="${LOG_ID:-$model_id}"
 model="TED"
 root_path="${ROOT_PATH:-${REPO_ROOT}/dataset/}"
@@ -153,7 +153,7 @@ if [ -n "$resume_checkpoint" ]; then
   extra_args+=(--resume_checkpoint "$resume_checkpoint")
 fi
 
-echo "[TED 12b768 data10 cXattnB indepFS rr e80] REPO_ROOT=$REPO_ROOT"
+echo "[TED hls-12b768] REPO_ROOT=$REPO_ROOT"
 echo "  model_id=$model_id"
 echo "  log_id=$log_id"
 echo "  arch=12b768d12h train_data_ratio=$train_data_ratio train_epochs=$train_epochs batch_size=$batch_size/GPU"

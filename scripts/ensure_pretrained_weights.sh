@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Ensure pretrained/*/pytorch_model.bin exist as real files (not hardlinks).
-# Copies from a local best-epoch bundle if weights are missing.
+# Ensure pretrained/*/pytorch_model.bin exist as real files.
+# Copies from a local release bundle if weights are missing.
 set -euo pipefail
 
 REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 BUNDLE="${PRETRAINED_BUNDLE:-/work/projects/resilientia/ziyun/TimeSeries_SSL_USA/reports/fullscale_12b768_best_ep_glance_cropharvest_checkpoint_bundle}"
 
 declare -A SRC=(
-  [ted-hls-12b768]="${BUNDLE}/job9616_TED_cXattnB_ep72/checkpoint_epoch_72.pth"
-  [msm-hls-12b768]="${BUNDLE}/job10909_MSM_reg4_ep25/checkpoint_epoch_25.pth"
-  [ntp-hls-12b768]="${BUNDLE}/job10685_NTP_ep25/checkpoint_epoch_25.pth"
+  [ted-hls-12b768]="${BUNDLE}/ted-hls-12b768/pytorch_model.bin"
+  [msm-hls-12b768]="${BUNDLE}/msm-hls-12b768/pytorch_model.bin"
+  [ntp-hls-12b768]="${BUNDLE}/ntp-hls-12b768/pytorch_model.bin"
 )
 
 for name in ted-hls-12b768 msm-hls-12b768 ntp-hls-12b768; do
@@ -32,7 +32,7 @@ for name in ted-hls-12b768 msm-hls-12b768 ntp-hls-12b768; do
     if [ ! -f "$src" ]; then
       echo "[ensure] MISSING weight for ${name}."
       echo "  Expected: $dest"
-      echo "  Or set PRETRAINED_BUNDLE to a dir containing the best-epoch .pth files."
+      echo "  Set PRETRAINED_BUNDLE to a dir containing ${name}/pytorch_model.bin."
       exit 1
     fi
     echo "[ensure] copying $src -> $dest"

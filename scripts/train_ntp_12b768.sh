@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# NTP | 12b768 | full data | matches released pretrained/ntp-hls-12b768 (job 10685)
+# NTP | 12b768 | full data | matches released pretrained/ntp-hls-12b768
 # Train-only entrypoint for the shareable package.
 
 set -euo pipefail
@@ -7,7 +7,7 @@ set -euo pipefail
 REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 cd "$REPO_ROOT"
 
-model_id="${MODEL_ID:-Patch_NTP_TED-12b768d12h-mag-data10-noLonLat-noMixedBatch-wd5e5-cos10-lr1e5-e80-remote}"
+model_id="${MODEL_ID:-ntp-hls-12b768}"
 model="NTP"
 root_path="${ROOT_PATH:-${REPO_ROOT}/dataset/}"
 

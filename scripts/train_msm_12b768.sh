@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MSM | 12b768 | full data | matches released pretrained/msm-hls-12b768 (job 10909, reg4)
+# MSM | 12b768 | full data | matches released pretrained/msm-hls-12b768
 # Train-only entrypoint for the shareable package.
 
 set -euo pipefail
@@ -7,7 +7,7 @@ set -euo pipefail
 REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 cd "$REPO_ROOT"
 
-model_id="${MODEL_ID:-Patch_Masked-12b768d12h-mag-data10-noLonLat-noMixedBatch-wd5e5-cos10-lr1e5-e80-reg4-remote}"
+model_id="${MODEL_ID:-msm-hls-12b768}"
 model="MSM"
 root_path="${ROOT_PATH:-${REPO_ROOT}/dataset/}"
 
@@ -77,7 +77,7 @@ export CUDA_VISIBLE_DEVICES="$devices"
 
 mkdir -p logs
 
-echo "[MSM 12b768 reg4] REPO_ROOT=$REPO_ROOT model_id=$model_id ROOT_PATH=$root_path devices=$devices nproc=$nproc_per_node batch=$batch_size epochs=$train_epochs"
+echo "[MSM hls-12b768] REPO_ROOT=$REPO_ROOT model_id=$model_id ROOT_PATH=$root_path devices=$devices nproc=$nproc_per_node batch=$batch_size epochs=$train_epochs"
 
 _common_args=(
   --model_id "$model_id"

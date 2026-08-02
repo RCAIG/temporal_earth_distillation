@@ -465,7 +465,7 @@ parser.add_argument(
     '--patchtst_mask_ratio',
     type=float,
     default=0.4,
-    help='MSM: fraction of patches masked when patchtst_style_masking=1 (reg4 → 0.4)',
+    help='MSM: fraction of patches masked when patchtst_style_masking=1',
 )
 parser.add_argument('--mask_rate_v2', type=float, default=0.6, help='max patch mask ratio for TED (DINOv3-style masking)')
 parser.add_argument(

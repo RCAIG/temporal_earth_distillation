@@ -1,6 +1,8 @@
 # Temporal Earth Distillation (TED)
 
-Temporal Earth Distillation for pixel-based satellite imagery time series pre-training (**TED**, **MSM**, **NTP**), with paper-aligned downstream land-cover classification evaluation.
+Temporal Earth Distillation for pixel-based satellite image time series pre-training, with paper-aligned baselines (**TED**, **MSM**, **NTP**) and downstream land-cover classification evaluation.
+
+![Temporal Earth Distillation overview](docs/figures/figure1_intro_composite_300dpi.jpg)
 
 ## Requirements
 
@@ -149,7 +151,7 @@ Details: `pretrained/README.md`.
 
 Legacy name aliases (`TED_modular`, `Patch_Masked`, `Patch_NTP_TED`, `Transformer`) still resolve at train time.
 
-Released zoo recipes: TED **cXattnB** (job 9616), MSM **reg4** (10909), NTP (10685) — see matching `scripts/train_*_12b768.sh`.
+Released recipes correspond to the paper-scale TED, MSM and NTP checkpoints in `pretrained/`. The matching training entry points are `scripts/train_ted_12b768.sh`, `scripts/train_msm_12b768.sh` and `scripts/train_ntp_12b768.sh`; historical run identifiers are kept only in checkpoint metadata for traceability.
 
 ## Notes
 

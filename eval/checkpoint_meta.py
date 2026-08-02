@@ -81,7 +81,7 @@ def infer_model_flags(model_id: str, state_dict: dict) -> dict:
     else:
         version = "v2"
     readout = infer_evidence_gap_readout(state_dict)
-    if readout is None and ("cXattnB" in model_id or "cond_xattn" in model_id):
+    if readout is None and "cond_xattn" in model_id:
         readout = "cond_xattn_bottleneck"
     if readout is None:
         readout = "gate" if evidence_gap_condition else "adapter"
