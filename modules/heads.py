@@ -1,10 +1,10 @@
-# DINO / Proto head (same behavior as models.TED.DINOHead, used by modules.backbone)
+# Categorical-state projection head used by the sequence-state and patch-state branches.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 
-class DINOHead(nn.Module):
+class CategoricalStateHead(nn.Module):
     """
     DINOHead structure optimized per dinov3 source
     MLP (in_dim -> hidden_dim -> hidden_dim -> bottleneck_dim) -> L2 normalize -> Linear (bottleneck_dim -> out_dim)
@@ -81,4 +81,6 @@ LayerNorm in feature dimensionnormalize, more suitable for time sequence tasks
         return x
 
 
-ProtoHead = DINOHead
+# Backward-compatible aliases for older configs/imports.
+DINOHead = CategoricalStateHead
+ProtoHead = CategoricalStateHead

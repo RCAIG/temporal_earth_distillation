@@ -1,10 +1,10 @@
 """
-JEPA-style context/target masking helpers for TED CE ablation.
+Context/target patch masking helpers for TED latent-prediction ablations.
 
-Isolated from the default DINOv3 iBOT mask path. Enable only via:
+Isolated from the default block-biased patch-state masking path. Enable only via:
   --ibot_target_mode jepa_block
   --ibot_context_target_attn disjoint
-Default training keeps using utils.tools.random_patch_masking_dinov3_style
+Default training keeps using the block-biased masking helper in utils.tools
 and full bidirectional attention (no call into this module).
 """
 from __future__ import annotations

@@ -67,7 +67,7 @@ temporal_earth_distillation/
 ├── train.py                 # SSL pretraining CLI (TED / MSM / NTP / Imputator)
 ├── eval_downstream.py       # downstream classification CLI
 ├── models/                  # ted.py, msm.py, ntp.py, imputator.py
-├── modules/                 # Backbone + DINO / Proto heads
+├── modules/                 # Backbone + sequence-state / patch-state heads
 ├── layers/
 ├── data/
 │   ├── hls_dataset.py       # pretraining loader (HLS only)
@@ -179,7 +179,7 @@ Details: `pretrained/README.md`.
 | `TED` | `models/ted.py` | Temporal Earth Distillation |
 | `MSM` | `models/msm.py` | Masked Sequence Modeling |
 | `NTP` | `models/ntp.py` | Next-Token Prediction |
-| `Imputator` | `models/imputator.py` | optional reconstruction helper for TED |
+| `Imputator` | `models/imputator.py` | optional observation imputation module |
 
 Legacy name aliases (`TED_modular`, `Patch_Masked`, `Patch_NTP_TED`, `Transformer`) still resolve at train time.
 

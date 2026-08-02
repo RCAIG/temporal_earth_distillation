@@ -1,10 +1,7 @@
-"""
-DINOv3-style dynamic parameter schedulers
-Supports dynamic LR, weight_decay, teacher_temp, and momentum
+"""Dynamic parameter schedulers for TED pre-training.
 
-Aligned with facebookresearch/dinov3:
-- scheduler_version=cosine：CosineScheduler (legacy optim.*-only config)
-- scheduler_version=dinov3_v2：linear_warmup_cosine_decay precomputes full curve (cfg.schedules v2)
+Supports per-iteration learning-rate, weight-decay, teacher-temperature
+and EMA-momentum schedules with warmup and cosine decay.
 """
 from __future__ import annotations
 
@@ -21,10 +18,7 @@ def linear_warmup_cosine_decay(
     total_iterations: int,
     cosine_iterations: int | None = None,
 ) -> np.ndarray:
-    """
-    DINOv3 train.cosine_lr_scheduler.linear_warmup_cosine_decay (official).
-    Order: linear warmup (endpoint=False, warmup_iterations) -> cosine -> optional constant end tail.
-    """
+    """Linear warmup followed by cosine decay and an optional constant tail."""
     linear = np.linspace(start, peak, warmup_iterations, endpoint=False)
     if cosine_iterations is None:
         cosine_iterations = total_iterations - warmup_iterations
@@ -61,10 +55,7 @@ class ArraySchedule(object):
 
 
 class CosineScheduler(object):
-    """
-    Cosine scheduler with warmup and cosine decay
-    see DINOv3 official implementation
-    """
+    """Cosine scheduler with warmup and cosine decay."""
     def __init__(
         self,
         base_value,
@@ -123,7 +114,7 @@ def _get_or(args, key, fallback):
 
 
 def _ddp_world_size(args):
-    """World size for LR scaling; matches DINOv3 distributed.get_world_size()."""
+    """World size for learning-rate scaling."""
     if not getattr(args, "use_multi_gpu", False):
         return 1
     try:
@@ -149,7 +140,7 @@ def _rank0_should_print(args):
 
 
 def _compute_scaled_lr_min_lr(args):
-    """Scale peak/floor LR per scaling_rule (DINOv3 build_schedulers_v2)."""
+    """Scale peak/floor LR according to the configured scaling rule."""
     base_lr = args.learning_rate
     scaling_rule = getattr(args, "scaling_rule", "sqrt_wrt_1024")
 
@@ -187,13 +178,11 @@ def _compute_scaled_lr_min_lr(args):
 
 
 def build_schedulers_dinov3_v2(args, train_steps_per_epoch):
-    """
-    DINOv3 build_schedulers_v2: LR/WD/momentum/teacher_temp all use linear_warmup_cosine_decay.
-    schedule_trunc_extra unused in this branch (official v2).
-    """
+    """Build LR/WD/momentum/teacher-temperature schedules with linear warmup and cosine decay.
+    schedule_trunc_extra is unused in this branch."""
     if getattr(args, "schedule_trunc_extra", 0.0) and _rank0_should_print(args):
         print(
-            "[schedulers] scheduler_version=dinov3_v2: ignoring schedule_trunc_extra="
+            "[schedulers] array scheduler branch: ignoring schedule_trunc_extra="
             f"{getattr(args, 'schedule_trunc_extra', 0.0)}"
         )
 

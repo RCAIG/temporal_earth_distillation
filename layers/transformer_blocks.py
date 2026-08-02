@@ -690,21 +690,21 @@ class InterSeason_AttnBlock(nn.Module):
 #         return x * torch.sigmoid(x)
 
 
-# # --------------- RoPE (DINOv3-style, 1D) ---------------
+# # --------------- RoPE (1D, optional) ---------------
 # def rope_rotate_half(x):
-#     """RoPE rotate half: [x0,x1,x2,x3,...] -> [-x1,x0,-x3,x2,...] (DINOv3 attention.py)"""
+#     """RoPE rotate half: [x0,x1,x2,x3,...] -> [-x1,x0,-x3,x2,...]."""
 #     x1, x2 = x.chunk(2, dim=-1)
 #     return torch.cat([-x2, x1], dim=-1)
 
 
 # def rope_apply(x, sin, cos):
-#     """Apply RoPE: (x*cos) + (rotate_half(x)*sin) (DINOv3 attention.py)"""
+#     """Apply RoPE: (x*cos) + (rotate_half(x)*sin)."""
 #     return (x * cos) + (rope_rotate_half(x) * sin)
 
 
 # class RopePositionEmbedding1D(nn.Module):
 #     """
-# 1D RoPE, align DINOv3’s RopePositionEmbedding idea: no mixed coordinates, no learning weights,
+# 1D RoPE with no mixed coordinates or learned positional weights,
 # Generate periods based on base, dynamically calculate sin/cos when forward based on currentsequencelength, and support any length.
 #     """
 #     def __init__(self, head_dim: int, base: float = 10000.0, dtype=None, device=None):

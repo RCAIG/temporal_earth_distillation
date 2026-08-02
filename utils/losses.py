@@ -1,4 +1,4 @@
-"""Loss functions used by TED, MSM, NTP and the optional imputator."""
+"""TED loss terms for sequence-state and patch-state self-distillation."""
 
 from __future__ import annotations
 
@@ -137,13 +137,11 @@ def smooth_loss(pred, mode='dy2'):
     return loss
 
 
-class SinkhornKnoppTeacher(nn.Module):
+class BalancedCategoricalAssignment(nn.Module):
     """
-    Sinkhorn-Knopp core module
-    optimized for DDP and dynamic batch size
-    Supports two modes:
-    1. DINO mode: use dynamically computed B_total (from teacher_output.shape[0])
-    2. iBOT mode: use passed n_masked_patches_tensor (more precise)
+    Balanced categorical-assignment module for teacher state distributions.
+    It supports sequence-state rows and masked patch-state rows under DDP, where
+    the number of valid rows may differ across ranks.
     """
     def __init__(self):
         super().__init__()
@@ -154,30 +152,30 @@ class SinkhornKnoppTeacher(nn.Module):
         teacher_output: [N_local, K] 
                         Note: if this rank has no samples, pass a dummy tensor [1, K]
         teacher_temp: temperature coefficient
-        n_masked_patches_tensor: optional for iBOT mode: number of masked patches (tensor)
-                                 if None, use DINO mode (from teacher_output.shape[0])
+        n_masked_patches_tensor: optional number of masked patch-state rows;
+                                 if None, infer the count from teacher_output.shape[0]
         """
         teacher_output = teacher_output.float()
-        # DINOv3 style: Q=exp(teacher/tau); no clamp here (CLS/patch share path)
+        # Temperature-scaled teacher logits for balanced assignment; no clamp.
         Q = torch.exp(teacher_output / teacher_temp).t()  # Q shape: [K, N_local]
         
-        K = Q.shape[0] # Prototypes
+        K = Q.shape[0] # categorical states
         B_local = Q.shape[1] # Local Batch Size
 
         # --- Key fix: dynamically compute global batch size (B) ---
         # Supports two modes:
-        # 1. iBOT mode: use passed n_masked_patches_tensor (more precise)
-        # 2. DINO mode: dynamic B from teacher_output.shape[0] (per-rank batch size)
+        # 1. patch-state path: use the explicit masked-row count when provided
+        # 2. sequence-state path: infer row count from teacher_output.shape[0]
         if n_masked_patches_tensor is not None:
-            # iBOT mode: use passed tensor
+            # patch-state path: use passed tensor
             B = n_masked_patches_tensor.clone().float()
             if dist.is_initialized():
                 dist.all_reduce(B, group=get_process_subgroup())
             B_total = B.item()
         else:
-            # DINO mode: dynamic computation
+            # sequence-state path: dynamic computation
             # cannot assume B_global = B_local * world_size because valid sample counts differ per rank
-            # even dummy tensors contribute B_local (usually 1), keeping Sinkhorn denominator non-zero
+            # even dummy tensors contribute B_local (usually 1), keeping the balanced-assignment denominator non-zero
             # slightly dilutes the global distribution (extra dummy samples) but avoids deadlock and keeps numerics stable.
             B_tensor = torch.tensor(B_local, device=teacher_output.device, dtype=torch.float32)
             if dist.is_initialized():
@@ -188,16 +186,16 @@ class SinkhornKnoppTeacher(nn.Module):
         if B_total == 0: B_total = 1.0
 
         # 2. normalize matrix sum
-        # keep consistent with DINOv3 source: no clamp
+        # keep assignment numerics unclamped for consistency across state heads
         sum_Q = torch.sum(Q)
         if dist.is_initialized():
             dist.all_reduce(sum_Q, group=get_process_subgroup())
         Q /= sum_Q
 
-        # 3. Sinkhorn iterations
-        # keep consistent with DINOv3 source: no clamp and extra NaN checks
+        # 3. Balanced-assignment iterations
+        # keep assignment numerics unclamped for consistency across state heads and extra NaN checks
         for _ in range(n_iterations):
-            # row normalize: each prototype total weight 1/K
+            # row normalize: each categorical state has total weight 1/K
             sum_of_rows = torch.sum(Q, dim=1, keepdim=True)
             if dist.is_initialized():
                 dist.all_reduce(sum_of_rows, group=get_process_subgroup())
@@ -214,22 +212,20 @@ class SinkhornKnoppTeacher(nn.Module):
         return Q.t() # return [N_local, K]
 
 
-class DINOLoss(nn.Module):
+class SequenceStateLoss(nn.Module):
     def __init__(self, out_dim, student_temp=0.1):
         super().__init__()
         self.student_temp = student_temp
-        self.sinkhorn = SinkhornKnoppTeacher()
+        self.sinkhorn = BalancedCategoricalAssignment()
 
     def forward(self, student_logits, teacher_probs, ignore_diagonal=False):
         """
-        student_logits: [n_crops_student, B, K]
-        teacher_probs:  [n_crops_teacher, B, K] (already processed by Sinkhorn)
+        student_logits: [n_student_windows, B, K]
+        teacher_probs:  [n_teacher_windows, B, K] after balanced assignment
         """
         student_crops, B, K = student_logits.shape
         teacher_crops, _, _ = teacher_probs.shape
-        
-        # ⚠️ consistent with DINOv3: log_softmax directly, no clamp
-        # DINOv3 source:student_logits = F.log_softmax(student_logits.float() / self.student_temp, dim=-1)
+        # Sequence-state CE uses log_softmax directly, with no extra clamp.
         student_logits = F.log_softmax(student_logits.float() / self.student_temp, dim=-1)
         
         if not ignore_diagonal:
@@ -237,7 +233,7 @@ class DINOLoss(nn.Module):
             loss = -torch.einsum("s b k, t b k -> ", student_logits, teacher_probs)
             return loss / (B * student_crops * teacher_crops)
         else:
-            # ignore same-image global-global pairs (DINOv3 style)
+            # ignore matched global-global rows when requested
             loss = -torch.einsum("s b k, t b k -> s t", student_logits, teacher_probs)
             min_st = min(student_crops, teacher_crops)
             loss = torch.diagonal_scatter(loss, loss.new_zeros(min_st))
@@ -245,8 +241,8 @@ class DINOLoss(nn.Module):
 
     def weighted_forward(self, student_logits, teacher_probs, pair_weights):
         """
-        Weighted CE over student/teacher crop pairs.
-        pair_weights: [n_crops_student, n_crops_teacher], zeros disable a pair.
+        Weighted CE over student/teacher temporal-window pairs.
+        pair_weights: [n_student_windows, n_teacher_windows], zeros disable a pair.
         """
         student_crops, B, _ = student_logits.shape
         teacher_crops, _, _ = teacher_probs.shape
@@ -270,10 +266,10 @@ def cls_local_bag_loss(
     contrib_margin=0.0,
 ):
     """
-    Bag-style local CLS: L local views pool to one "bag" distribution vs averaged teacher targets.
+    Bag-style local sequence state: local temporal windows pool to one distribution against averaged teacher targets.
 
     s_logits_local: [L, B, K]
-    t_probs:        [N_teacher_crops, B, K] (Sinkhorn outputs; same as DINOLoss global path)
+    t_probs:        [N_teacher_windows, B, K] after balanced assignment
     """
     L, B, K = s_logits_local.shape
     st = float(student_temp)
@@ -304,12 +300,12 @@ def crop_view_loss(
     lambda_ind=1.0,
 ):
     """
-    Set-posterior crop local CLS: pool crop views with generalized mean (gamma),
-    then CE vs each teacher global (mean over teacher views after CE, not before).
-    Optional per-crop anchor (loss_ind) keeps individual views tied to teacher targets.
+    Set-posterior local sequence state: pool temporal crops with generalized mean (gamma),
+    then compute CE against each teacher context. Optional per-crop anchoring keeps
+    individual evidence windows tied to teacher targets.
 
-    s_logits_local: [L, B, K], first n_crop rows are temporal crops
-    t_probs:        [T, B, K]
+    s_logits_local: [L, B, K], first n_crop rows are temporal evidence crops
+    t_probs:        [T, B, K] teacher context states
     """
     eps = 1e-6
     nc = int(n_crop)
@@ -349,16 +345,16 @@ def crop_view_loss(
     return (ls * loss_set + li * loss_ind) / denom
 
 
-class iBOTPatchLoss(nn.Module):
+class PatchStateLoss(nn.Module):
     def __init__(self, patch_out_dim, student_temp=0.1):
         super().__init__()
         self.student_temp = student_temp
-        self.sinkhorn = SinkhornKnoppTeacher()
+        self.sinkhorn = BalancedCategoricalAssignment()
 
     def forward_fft_bins(self, student_logits_flat, teacher_soft_flat):
         """
-        FFT proto: same CE as forward_masked per row; each row is (view, sample, freq_bin);
-        teacher_soft_flat is Sinkhorn output. Same as DINOLoss: no clamp on log_softmax.
+        Frequency-bin state loss: same CE as forward_masked per row; each row is
+        (view, sample, freq_bin), and teacher_soft_flat is a balanced assignment.
         """
         log_p = F.log_softmax(student_logits_flat.float() / self.student_temp, dim=-1)
         per_row = -(teacher_soft_flat.float() * log_p).sum(dim=-1)
@@ -376,7 +372,7 @@ class iBOTPatchLoss(nn.Module):
         t = teacher_patch_tokens_masked
         s = student_patch_tokens_masked
         
-        # compute cross-entropy
+        # compute patch-state cross-entropy
         loss = torch.sum(t.float() * F.log_softmax(s.float() / self.student_temp, dim=-1), dim=-1)
         
         if masks_weight is None:
@@ -396,10 +392,10 @@ class iBOTPatchLoss(nn.Module):
         loss = loss * masks_weight
 
         # Denominator:
-        # - If TED passes ibot_denom_rows: count (global_student_view, batch) rows that still contribute >=1 masked patch after reliable-patch filtering,
+        # - If TED passes ibot_denom_rows: count (student window, batch) rows that still contribute >=1 masked patch after reliable-patch filtering,
         #   (global_student_view, batch) rows, avoiding numerator on reliable patches only while denominator uses unfiltered mask rows
-        #   which keeps iBOT scalar abnormally low.
-        # - else: number of global rows with at least one masked patch (DINOv3 / mask_sample_probability semantics).
+        #   which keeps the patch-state scalar from being abnormally low.
+        # - else: number of global rows with at least one masked patch.
         if ibot_denom_rows is not None:
             denom = max(float(ibot_denom_rows), 1.0)
         elif student_masks_flat is not None:
@@ -411,7 +407,7 @@ class iBOTPatchLoss(nn.Module):
         return -loss.sum() / denom
 
 
-class KoleoLoss(nn.Module):
+class FeatureSpreadLoss(nn.Module):
     def __init__(self, epsilon=1e-8):
         super().__init__()
         self.epsilon = epsilon
@@ -430,9 +426,9 @@ class KoleoLoss(nn.Module):
         return loss
 
 
-class FFTGramAlignment(nn.Module):
+class FrequencyDomainPatchAlignment(nn.Module):
     """
-    Frequency-domain Gram regularization (light constraint):
+    Frequency-domain patch alignment (light constraint):
     1) rFFT along patch sequence dim;
     2) remove DC;
     3) log1p(|·|)；
@@ -467,7 +463,7 @@ class FFTGramAlignment(nn.Module):
         returns [B, F_no_dc, D] or None if too short
 
         rFFT keeps patches dtype (e.g. FP16/BF16 under AMP), avoiding full [B,N,D].float();
-        magnitude to FP32 then log1p/weight/L2/Gram, same as all-FP32 FFT path.
+        magnitude to FP32 before the frequency-domain Gram calculation.
         """
         x_fft = torch.fft.rfft(patches, dim=1, norm='ortho')
         x_mag = torch.log1p(torch.abs(x_fft).float())
@@ -548,8 +544,8 @@ class FFTGramAlignment(nn.Module):
 
 def fft_gram_align_masked_patch_rows(fft_mod, s_pre, t_pre, row_ids, patch_idx):
     """
-    FFT Gram only on masked patches ordered in time within each (global view x batch) row, then rFFT-Gram.
-    Same pre-head patch vectors as iBOT; skip rows with <2 masked patches (no spectral dim for one point).
+    Frequency-domain alignment on masked patches ordered in time within each
+    (student window x batch) row; skip rows with <2 masked patches.
     """
     if (
         s_pre is None
@@ -591,10 +587,11 @@ def temporal_neighbor_loss(z_patch):
     return 1.0 - F.cosine_similarity(z1, z2, dim=-1).mean()
 
 
-class DINOCriteria(nn.Module):
+class TEDCriterion(nn.Module):
     """
-    Main loss container:
-    handles dummy-data logic so ranks communicate even with no valid samples
+    TED self-distillation criterion.
+    Combines sequence-state inference, patch-state supervision, feature-spread
+    regularization and frequency-domain patch alignment while keeping DDP ranks synchronized.
     """
     def __init__(self, args, device):
         super().__init__()
@@ -602,10 +599,10 @@ class DINOCriteria(nn.Module):
         self.device = device
         
         _st = float(getattr(args, "student_temp", 0.1))
-        self.dino_loss_fn = DINOLoss(
+        self.dino_loss_fn = SequenceStateLoss(
             out_dim=args.dino_head_n_prototypes, student_temp=_st
         ).to(device)
-        self.ibot_loss_fn = iBOTPatchLoss(
+        self.ibot_loss_fn = PatchStateLoss(
             patch_out_dim=args.ibot_head_n_prototypes, student_temp=_st
         ).to(device)
         f_ref_cfg = int(getattr(args, "fft_align_gram_mse_f_ref_bins", 0))
@@ -619,14 +616,14 @@ class DINOCriteria(nn.Module):
             gram_f_ref = max(1, n_p // 2)
         else:
             gram_f_ref = max(1, f_ref_cfg)
-        self.fft_gram_align_fn = FFTGramAlignment(
+        self.fft_gram_align_fn = FrequencyDomainPatchAlignment(
             alpha=1.0,
             gram_mse_f_ref_bins=gram_f_ref,
             freq_keep_ratio=float(getattr(args, "fft_align_freq_keep_ratio", 1.0)),
             freq_min_bins=int(getattr(args, "fft_align_freq_min_bins", 1)),
             freq_max_bins=int(getattr(args, "fft_align_freq_max_bins", 0)),
         ).to(device)
-        self.koleo_loss_fn = KoleoLoss().to(device)
+        self.koleo_loss_fn = FeatureSpreadLoss().to(device)
 
     def forward(self, outputs):
         # unpack outputs
@@ -643,7 +640,7 @@ class DINOCriteria(nn.Module):
         l_cls_cons = lambda_weights.get('lambda_cls_cons', getattr(self.args, 'lambda_cls_cons', 0.05))
 
         # ----------------------------------------------------------------
-        # 1. CLS Loss (DINO) - includes deadlock-avoidance logic
+        # 1. Sequence-state loss - includes deadlock-avoidance logic
         # ----------------------------------------------------------------
         loss_cls = torch.tensor(0.0, device=self.device)
         cls_global_overlap_ratio_log = None
@@ -663,18 +660,18 @@ class DINOCriteria(nn.Module):
             # whether this rank has valid data
             has_data = (s_logits_global is not None and len(valid_idx) > 0)
             
-            # --- key: prepare Sinkhorn input ---
+            # --- prepare balanced-assignment input ---
             if has_data:
-                # normal case: flatten for Sinkhorn
-                # ⚠️ Consistent with DINOv3 source code: convert to float32 only, no extra NaN checks
+                # normal case: flatten for balanced assignment
+                # Convert to float32 only; no extra NaN checks on this path.
                 t_in = t_logits_global.flatten(0, 1).detach().float() # [Total_Crops, K]
             else:
                 # edge case: dummy input [1, K]
-                # zeros or random OK; Sinkhorn runs; result discarded
+                # zeros are sufficient; assignment runs and the result is discarded
                 dummy_k = self.args.dino_head_n_prototypes
                 t_in = torch.zeros((1, dummy_k), device=self.device, dtype=torch.float32)
 
-            # --- run synchronized Sinkhorn ---
+            # --- run synchronized balanced assignment ---
             # all ranks must run this step regardless of data
             t_out = self.dino_loss_fn.sinkhorn.forward(t_in, teacher_temp)
 
@@ -683,7 +680,7 @@ class DINOCriteria(nn.Module):
                 # restore shape: [N_crops, B_valid, K]
                 t_probs = t_out.unflatten(0, t_logits_global.shape[:2])
                 
-                # Global-Global Loss
+                # Global context sequence-state loss
                 global_loss_mode = getattr(self.args, "cls_global_loss_mode", "dino")
                 if cls_data.get("cls_loss_mode", None) == "evidence_gap":
                     if bool(cls_data.get("evidence_gap_pairwise", False)):
@@ -1054,7 +1051,7 @@ class DINOCriteria(nn.Module):
                     else:
                         loss_l = _per_view_local_loss(s_logits_local)
                 
-                # use DINOv3 global/local scales so varying local view counts do not shift gradient share
+                # use fixed global/local scales so varying local-window counts do not shift gradient share
                 dino_global_scale = cls_data.get("dino_global_scale", None)
                 dino_local_scale = cls_data.get("dino_local_scale", None)
 
@@ -1065,7 +1062,7 @@ class DINOCriteria(nn.Module):
                     loss_cls = dino_global_scale * loss_g + dino_local_scale * loss_l
 
         # ----------------------------------------------------------------
-        # 2. Patch Loss (iBOT) - includes deadlock-avoidance logic
+        # 2. Patch-state loss - includes deadlock-avoidance logic
         # ----------------------------------------------------------------
         loss_patch = torch.tensor(0.0, device=self.device)
         if l_patch > 0:
@@ -1075,7 +1072,7 @@ class DINOCriteria(nn.Module):
 
             has_patch_data = s_masked is not None and len(s_masked) > 0
 
-            # --- key: prepare Sinkhorn input ---
+            # --- prepare balanced-assignment input ---
             if has_patch_data:
                 # normal: real teacher patch logits and this rank's masked count
                 t_in = t_masked.detach().float()
@@ -1089,7 +1086,7 @@ class DINOCriteria(nn.Module):
                 t_in = torch.zeros((1, dummy_k), device=self.device, dtype=torch.float32)
                 n_masked_patches_tensor = torch.tensor(0, device=self.device, dtype=torch.long)
 
-            # --- run synchronized Sinkhorn ---
+            # --- run synchronized balanced assignment ---
             t_out = self.ibot_loss_fn.sinkhorn.forward(
                 t_in,
                 teacher_temp,
@@ -1112,7 +1109,7 @@ class DINOCriteria(nn.Module):
                 if all_valid_tokens is not None:
                     # forward_masked already row-averaged with ibot_denom_rows.
                     # here denom_rows / sum(n_i) equals divide by mean(n_i),
-                    # keep n_i/m_i missing reweight while staying near original iBOT scale.
+                    # keep n_i/m_i missing reweight while staying near the patch-state loss scale.
                     denom_rows = patch_data.get('ibot_denom_rows', None)
                     if denom_rows is None:
                         denom_rows = 1.0
@@ -1131,7 +1128,7 @@ class DINOCriteria(nn.Module):
         # 3. Other losses (local calculation, no DDP sync processing required)
         # ----------------------------------------------------------------
         
-        # FFT align loss: spectral Gram on masked patches by default; --fft_align_all_patches uses full window.
+        # Frequency-domain patch alignment: masked patches by default; --fft_align_all_patches uses full windows.
         loss_fft_align = torch.tensor(0.0, device=self.device)
         if l_fft_align > 0:
             spec_data = outputs.get('spectral_data', {})
@@ -1150,7 +1147,7 @@ class DINOCriteria(nn.Module):
                 if s_patch is not None and t_patch is not None and len(s_patch) > 0:
                     loss_fft_align = self.fft_gram_align_fn(s_patch, t_patch)
 
-        # Koleo Loss
+        # Feature-spread regularization
         loss_koleo = torch.tensor(0.0, device=self.device)
         if l_koleo > 0:
             k_data = outputs.get('koleo_data', {})
@@ -1265,3 +1262,12 @@ class DINOCriteria(nn.Module):
                         loss_dict[dst] = float(val)
         
         return total_loss, loss_dict
+
+
+# Backward-compatible aliases for older scripts and checkpoints/configs that import the original names.
+SinkhornKnoppTeacher = BalancedCategoricalAssignment
+DINOLoss = SequenceStateLoss
+iBOTPatchLoss = PatchStateLoss
+KoleoLoss = FeatureSpreadLoss
+FFTGramAlignment = FrequencyDomainPatchAlignment
+DINOCriteria = TEDCriterion

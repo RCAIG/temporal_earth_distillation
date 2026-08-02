@@ -1,4 +1,4 @@
-# TED backbone: same as models.TED.Backbone (PositionalEncoding + Encoder/Decoder + DINO/iBOT heads)
+# TED backbone: temporal encoder with sequence-state and patch-state heads
 import math
 import torch
 import torch.nn as nn

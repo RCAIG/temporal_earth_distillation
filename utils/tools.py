@@ -1191,9 +1191,9 @@ def unpatchify(x_patches, original_seq_len, patch_len, c_out):
 
 def random_patch_masking_patchtst_uniform(B, num_patches, mask_ratio, device):
     """
-    PatchTST (Nie et al., ICLR 2023) §3.2 masking SSL:
+    Uniform random patch masking for the MSM baseline:
     uniform random mask ratio on patch indices; MSE reconstruct masked patches only.
-    same return tuple as random_patch_masking_dinov3_style for MSM swap.
+    same return tuple as the block-biased masking helper for MSM swap.
 
     Args:
         B: batch size
@@ -1240,11 +1240,11 @@ def random_patch_masking_dinov3_style(
     block_size: int = 5,
 ):
     """
-    DINOv3-style mask generation (optimized: avoid CPU-GPU sync)
+    Block-biased patch mask generation (optimized: avoid CPU-GPU sync)
     Args:
         B: batch size
         mask_ratio_tuple: (min_ratio, max_ratio)，e.g. (0.1, 0.5)
-            mask_sample_probability: fraction of B rows with non-empty patch mask (0-1); 0.5 ~ half rows empty (DINO style)
+            mask_sample_probability: fraction of B rows with non-empty patch mask (0-1); 0.5 keeps about half rows unmasked
         num_patches: number of patches
         device: device
     Returns:

@@ -20,7 +20,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from data.factory import data_provider
 from engine.base_trainer import BaseTrainer
 from models.imputator import load_pretrained_imputator
-from utils.losses import DINOCriteria
+from utils.losses import TEDCriterion
 from utils.schedulers import apply_optim_scheduler, build_schedulers
 from utils.tools import save_model_periodically, EarlyStopping, resolve_fft_align_lambda_for_epoch
 
@@ -44,12 +44,12 @@ class SSLTrainer(BaseTrainer):
         self.timestamp = time.strftime("%Y%m%d_%H%M%S")
         # Downstream probe/eval entry points intentionally omitted in this package.
         # --- 1. Initialize Loss module (globalunique, shared state) ---
-        self.criterion = DINOCriteria(self.args, self.device)
+        self.criterion = TEDCriterion(self.args, self.device)
 
     def _compute_loss(self, outputs):
         """
         Compute loss from model output. For MSM / NTP SSL models,
-        use outputs['ssl_loss'] directly; else use DINOCriteria.
+        use outputs['ssl_loss'] directly; else use TEDCriterion.
         """
         if 'ssl_loss' in outputs:
             loss = outputs['ssl_loss']
@@ -125,7 +125,7 @@ class SSLTrainer(BaseTrainer):
                     })
                 else:
                     noreg_groups.append(param)
-            # 2. The last layer (Prototypes) of DINO/iBOT Head must never decay
+            # 2. The last categorical-state layer should not use weight decay
             elif is_last_layer:
                 last_layer_groups.append({
                     'params': [param],
@@ -427,7 +427,7 @@ class SSLTrainer(BaseTrainer):
                 else "[AMP] disabled"
             )
 
-        # --- 2. DINOv3 style scheduler initialization ---
+        # --- 2. Dynamic scheduler initialization ---
         # Build all schedulers（LR, WD, Momentum, Teacher Temp）
         lr_schedule, wd_schedule, momentum_schedule, teacher_temp_schedule, last_layer_lr_schedule = build_schedulers(
             self.args, train_steps

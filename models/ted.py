@@ -1,7 +1,4 @@
-"""
-TED modular entry：`Backbone` / `DINOHead` Backbone/DINOHead under modules/; training logic consistent with models.TED.Model.
-Primary TED implementation used for training in this package.
-"""
+"""Primary TED implementation: temporal backbone plus sequence-state and patch-state heads."""
 import math
 import os
 import time
@@ -120,36 +117,36 @@ class Model(nn.Module):
         else:
             _n_rand = 0
         self.ted_modular_n_local_random_views = _n_rand
-        # 2. Loss in external DINOCriteria; Model only forward pass
+        # 2. Loss is computed by the external TED criterion; Model only performs forward passes
         
-        # 3. Weights (align DINOv3 official config for external loss)
+        # 3. Loss weights for sequence-state, patch-state and auxiliary regularization terms
         # keep base values for epoch scheduling during training
-        # Backbone has no decoder: no pixel or FFT reconstruction loss
+        # Backbone has no decoder: no pixel or frequency-domain reconstruction loss
         self.lambda_recon = 0.0
-        self.lambda_fft_align = getattr(configs, 'lambda_fft_align', 0.05)  # patch representation spectral align (unrelated to FFT recon)
+        self.lambda_fft_align = getattr(configs, 'lambda_fft_align', 0.05)  # frequency-domain patch alignment (unrelated to reconstruction)
         self.lambda_cls_proto = configs.lambda_cls_proto if hasattr(configs, 'lambda_cls_proto') else 1.0
         self.lambda_patch_proto = configs.lambda_patch_proto if hasattr(configs, 'lambda_patch_proto') else 1.0  # key fix: increased from 0.2 to 1.0
         self.lambda_koleo = configs.lambda_koleo if hasattr(configs, 'lambda_koleo') else 0.05
         self.lambda_temporal = configs.lambda_temporal if hasattr(configs, 'lambda_temporal') else 0.2  # reduced from 0.3 to 0.2 (balance)
-        # DINOv3-style patch masking block fraction (rest random), externally configurable
+        # Block-biased patch masking fraction for patch-state supervision
         self.block_mask_ratio = getattr(configs, 'block_mask_ratio', 0.8)
-        # DINO-consistent: only partial global rows get patch mask (not all rows; others excluded from iBOT)
+        # Only a subset of global rows receives patch masks; unmasked rows are excluded from patch-state loss
         self.mask_sample_probability = getattr(configs, 'mask_sample_probability', 0.5)
         # down-weight patch loss at imputator-filled positions (1.0 = no down-weight)
         self.imputed_patch_weight = getattr(configs, 'imputed_patch_weight', 1.0)
         # Raw-imputed CLS consistency: align CLS of raw/imputed views (0 disables)
         self.lambda_cls_cons = getattr(configs, 'lambda_cls_cons', 0.05)
-        # FFT Gram: spectral align only when original valid-obs ratio high enough (intersect DINO valid). Gram on each global-view pair
+        # Frequency-domain patch alignment runs only when original valid-observation ratio is high enough. Alignment is computed on each global-view pair
         # on samples passing threshold; do not filter rows by patch mask density.
         self.fft_align_min_valid_ratio = float(
             getattr(configs, "fft_align_min_valid_ratio", 0.0)
         )
-        # FFT Gram: default only on iBOT masked patches (same support as patch loss); --fft_align_all_patches restores legacy behavior
+        # Frequency-domain patch alignment defaults to masked patches, sharing support with patch-state loss; --fft_align_all_patches uses full windows
         self.fft_align_all_patches = bool(
             getattr(configs, "fft_align_all_patches", False)
         )
 
-        # Teacher temperature for sinkhorn-knopp
+        # Teacher temperature for balanced categorical assignment
         self.teacher_temp = getattr(configs, 'teacher_temp', 0.07)
         
         # 4. training state tracking
@@ -161,7 +158,7 @@ class Model(nn.Module):
         
         # 5. validation thresholds
         self.valid_patch_threshold = 0.5  # threshold for valid patches
-        # full-sequence original valid-obs ratio must exceed this for DINO/iBOT/koleo etc. (matches train.py default)
+        # full-sequence original valid-observation ratio must exceed this for distillation and auxiliary regularization
         self.valid_sample_threshold = float(
             getattr(configs, "valid_sample_threshold", 0.0)
         )
@@ -280,7 +277,7 @@ class Model(nn.Module):
         self.evidence_gap_drop_global_cls = bool(
             int(getattr(configs, "evidence_gap_drop_global_cls", 0))
         )
-        # JEPA-CE ablation knobs (defaults preserve legacy iBOT + full attention).
+        # Latent-prediction CE ablation knobs; defaults preserve the paper release path.
         self.ibot_target_mode = str(
             getattr(configs, "ibot_target_mode", "dinov3")
         ).lower()
@@ -761,7 +758,7 @@ class Model(nn.Module):
         return student_param_list, teacher_param_list
 
     def _update_teacher(self, m=None):
-        """EMA update in the DINOv3 foreach style, with TED norm mapping."""
+        """EMA teacher update for TED, with normalization-layer mapping."""
         if m is None:
             m = 0.992
 
@@ -824,7 +821,7 @@ class Model(nn.Module):
     ):
         """
         Patch-mask factory for evidence-gap global students.
-        Default: legacy DINOv3-style sampler. JEPA-CE: contiguous target blocks
+        Default: block-biased patch sampler. JEPA-CE: contiguous target blocks
         via utils.jepa_masking (imported only when selected).
         """
         if mask_rate_v2 is None:
@@ -1550,7 +1547,7 @@ class Model(nn.Module):
         return logits.view(*original_shape, logits.shape[-1])
 
     def _cond_mlp_evidence_gap_logits(self, z_cls, condition_num, view_type):
-        """Short views: concat(z, embed(condition)) -> cond MLP -> shared prototype layer."""
+        """Short views: concat(z, embed(condition)) -> conditioner MLP -> shared categorical-state layer."""
         original_shape = z_cls.shape[:-1]
         z_flat = z_cls.reshape(-1, z_cls.shape[-1])
         n_flat = int(z_flat.shape[0])
@@ -1595,7 +1592,7 @@ class Model(nn.Module):
         return logits.view(*original_shape, out_dim)
 
     def _cond_sum_mlp_evidence_gap_logits(self, z_cls, condition_num, view_type):
-        """Short views: MLP_z(z) + MLP_c(embed(c)) -> shared prototype layer."""
+        """Short views: MLP_z(z) + MLP_c(embed(c)) -> shared categorical-state layer."""
         original_shape = z_cls.shape[:-1]
         z_flat = z_cls.reshape(-1, z_cls.shape[-1])
         n_flat = int(z_flat.shape[0])
@@ -1651,7 +1648,7 @@ class Model(nn.Module):
         return logits.view(*original_shape, out_dim)
 
     def _cond_film_mlp_evidence_gap_logits(self, z_cls, condition_num, view_type):
-        """Short views: FiLM-MLP(z, embed(c)) -> shared prototype layer."""
+        """Short views: FiLM-MLP(z, embed(c)) -> shared categorical-state layer."""
         original_shape = z_cls.shape[:-1]
         z_flat = z_cls.reshape(-1, z_cls.shape[-1])
         n_flat = int(z_flat.shape[0])
@@ -3022,7 +3019,7 @@ class Model(nn.Module):
         _ssl_nv = int(valid_sample_indices.numel())
         koleo_flat = None
         if _ssl_nv > 0 and s_z_global_valid is not None:
-            # Koleo: global student only (raw CLS); short views excluded.
+            # Feature-spread regularization: global student only (raw sequence token); short views excluded.
             koleo_flat = s_z_global_valid
         return {
             "z_global": s_z_global_gap,
@@ -3106,7 +3103,7 @@ class Model(nn.Module):
         lon_lat=None,
     ):
         """
-        DINO-style dual-teacher cross-view:
+        Dual-teacher cross-window sequence-state pairing:
           - sample teacher_len, two distinct offsets (W_a, W_b)
           - 2 global students (one per window) cross-paired to opposite teachers
           - n_short_crop + n_short_random short views per window, cross-paired to opposite teachers
@@ -3950,7 +3947,7 @@ class Model(nn.Module):
         # === Anchor temporal crop + optional second global crop ===
         # View 0 remains the anchor window. View 1 can shift to another
         # same-length window so the two global views differ in temporal content,
-        # matching DINO-style multi-crop more closely.
+        # matching multi-window self-distillation more closely.
         T_full = int(T)
         te_start = int(start_idx)
         st_start = int(start_idx)
@@ -4507,7 +4504,7 @@ class Model(nn.Module):
 
         # 5. Student Forward (Backbone) - handle multiple student views
         
-        # use DINOv3 style patch mask (include block + random structure)
+        # use block-biased patch masks with random patches
         # The mask ratio interval is controlled by mask_rate_v1 / mask_rate_v2, which provides an external interface instead of hard-coding.
         # If only one value is given (mask_rate_v2 is empty), then use a fixed mask ratio.
         if mask_rate_v2 is None:
@@ -4602,7 +4599,7 @@ class Model(nn.Module):
         # Auxiliary function: filter based on Valid Sample (based on original observation quality, not missing_mask after imputator)
         # Notes:
         # - Even if the missing value is padded using imputator, if there are very few original valid observation points, the pseudo target of the sample is still unreliable.
-        # Should not participate in self-distillation loss of DINO/iBOT.
+        # Should not participate in sequence-state or patch-state distillation.
         # - So here use missing_mask_orig to measure samplevalidobservationratio.
         valid_ratio_per_sample = valid_ratio_per_global_view.min(dim=0).values
         valid_sample_threshold = float(self.valid_sample_threshold)
@@ -4610,7 +4607,7 @@ class Model(nn.Module):
         
         if len(valid_sample_indices) == 0:
             # No sample passes valid_sample_threshold: exclude cls/patch/koleo/temporal;
-            # FFT Gram should also no longer calculate "not passing the threshold" sample (previously, when thr_ff<=0, it would mistakenly usefull batch).
+            # Frequency-domain alignment should also skip samples that do not pass the threshold (previously, when thr_ff<=0, it would mistakenly usefull batch).
             return {
                 'z_global': s_z_global,
                 'valid_sample_indices': valid_sample_indices,
@@ -4681,7 +4678,7 @@ Filter the data on the batch dimension according to the sample index to ensure t
             else:
                 return tensor[valid_indices]
 
-        # B. CLS Loss (DINO) data preparation
+        # B. Sequence-state loss data preparation
         max_batch_size = s_logits_global.shape[1] if len(s_logits_global.shape) >= 2 else s_logits_global.shape[0]
         valid_sample_indices_safe = valid_sample_indices[valid_sample_indices < max_batch_size]
         
@@ -4714,12 +4711,12 @@ Filter the data on the batch dimension according to the sample index to ensure t
                 dino_global_scale = None
                 dino_local_scale = None
 
-        # C. Patch Loss (iBOT) data preparation
+        # C. Patch-state loss data preparation
         fft_masked_s_pre = None
         fft_masked_t_pre = None
         fft_masked_row_ids = None
         fft_masked_patch_idx = None
-        # note: now ibot_head should only be used for masked patches (consistent with DINOv3)
+        # note: the patch-state head is used only for masked patches
         s_patch_masked = None
         t_patch_masked = None
         masks_weight_global_valid = None
@@ -4797,14 +4794,14 @@ Filter the data on the batch dimension according to the sample index to ensure t
                     if not self._ibot_index_guard_warned_s:
                         dropped_s = int((~valid_idx_s).sum().item())
                         print(
-                            f"[iBOT index guard] drop {dropped_s} invalid student mask indices; max={max_student_idx}",
+                            f"[patch-state index guard] drop {dropped_s} invalid student mask indices; max={max_student_idx}",
                             flush=True,
                         )
                         self._ibot_index_guard_warned_s = True
                     mask_indices_list_global_valid = mask_indices_list_global_valid[valid_idx_s]
 
                 if len(mask_indices_list_global_valid) > 0:
-                    # Teacher: Select the pre-head features of masked patches and then use ibot_head
+                    # Teacher: select pre-head features of masked patches before the patch-state head
                     t_patch_all_global = t_z_patch_batch.view(n_teacher_views, B, -1, t_z_patch_batch.shape[-1])  # [n_teacher, B, N, D]
                     t_patch_all_global_valid = t_patch_all_global[:, valid_sample_indices_safe, n_patch_offset:n_patch_offset + N_patch, :]  # [n_teacher, B_valid, N_common, D]
                     t_patch_flat_valid = t_patch_all_global_valid.flatten(0, 1).flatten(0, 1)  # [n_teacher * B_valid * N, D]
@@ -4817,7 +4814,7 @@ Filter the data on the batch dimension according to the sample index to ensure t
                         if not self._ibot_index_guard_warned_t:
                             dropped_t = int((~valid_idx_t).sum().item())
                             print(
-                                f"[iBOT index guard] drop {dropped_t} invalid teacher mask indices; max={max_teacher_idx}",
+                                f"[patch-state index guard] drop {dropped_t} invalid teacher mask indices; max={max_teacher_idx}",
                                 flush=True,
                             )
                             self._ibot_index_guard_warned_t = True
@@ -4837,8 +4834,8 @@ Filter the data on the batch dimension according to the sample index to ensure t
                         with torch.no_grad():
                             t_patch_masked = self.teacher.ibot_head(t_masked_patches_pre_head).detach()  # [n_masked_valid, K]
 
-                        # iBOT weights:
-                        # DINOv3 averages masked tokens within each row because all patches are valid.
+                        # Patch-state weights:
+                        # The original token-level loss averages masked tokens within each row because all patches are valid.
                         # TED first drops unreliable masked patches, so use the retained masked count
                         # per row. This keeps row weight linear in the raw-valid patch count instead
                         # of multiplying it again by retained/original masked ratio.
@@ -4902,7 +4899,7 @@ Filter the data on the batch dimension according to the sample index to ensure t
                                 self, "ibot_patch_reliable_mode", "filter"
                             )
 
-        # D. Koleo Regularization
+        # D. Feature-spread regularization
         s_z_cls_global_valid = filter_batch(s_z_cls_global_list, valid_sample_indices_safe)
         s_z_cls_flat = None
         if s_z_cls_global_valid.shape[0] > 0 and s_z_cls_global_valid.shape[1] > 0:
@@ -4926,7 +4923,7 @@ Filter the data on the batch dimension according to the sample index to ensure t
         # E. Temporal Loss
         s_z_patch_enc_valid = filter_batch(s_z_patch_enc, valid_sample_indices_safe)
 
-        # F. FFT Align (legacy full window patch): only when fft_align_all_patches; else then use mask pre-head in spectral_data
+        # F. Frequency-domain patch alignment: full windows only when fft_align_all_patches; otherwise use masked pre-head patch tokens
         s_patch_tokens_all = None
         t_patch_tokens_all = None
         if self.fft_align_all_patches:
@@ -4944,7 +4941,7 @@ Filter the data on the batch dimension according to the sample index to ensure t
                         self._fft_align_patch_warned = False
                     if not self._fft_align_patch_warned:
                         print(
-                            f"[FFT align patch] student={n_patch_student}, teacher={n_patch_teacher}, "
+                            f"[frequency-domain patch align] student={n_patch_student}, teacher={n_patch_teacher}, "
                             f"teacher_offset={n_po_fft}, align={n_patch_align}",
                             flush=True,
                         )

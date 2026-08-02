@@ -8,10 +8,10 @@ Intentionally aligned with the TED Backbone patch path:
   final LayerNorm.
 
 Training objective (main difference vs TED):
-  zero masked patches then reconstruct with MSE; no teacher EMA, no DINO/iBOT/Koleo.
-  Masking zeros patch values before the Linear embedding (unlike Backbone iBOT mask_token replace).
+  zero masked patches then reconstruct with MSE; no EMA teacher, categorical-state supervision or feature-spread regularization.
+  Masking zeros patch values before the Linear embedding.
 
-PatchTST-style notes (Nie et al., ICLR 2023, §3.2): non-overlapping patches when
+Uniform patch-masking notes: non-overlapping patches when
 stride==patch_len; optional uniform random patch masking via patchtst_style_masking.
 Channel-mixed patch embedding is used (not channel-independent).
 """
@@ -30,7 +30,7 @@ from utils.losses import mse_loss
 class PatchMaskedEncoder(nn.Module):
     """
 with modules.backbone.Backbone's "patch branch" align: CLS + storage + patch tokens,
-Isomorphic AttentionBlock (including drop_path); no DINO/iBOT head, no mask_token embedding replacement (see class documentation).
+Isomorphic AttentionBlock (including drop_path); no categorical-state head or mask-token replacement.
     """
 
     def __init__(self, configs):
@@ -216,7 +216,7 @@ Isomorphic AttentionBlock (including drop_path); no DINO/iBOT head, no mask_toke
 
 class Model(nn.Module):
     """
-maskself-supervised: patch-level random zeroing + MSE reconstructionmasked patch (see module-level docstring and PatchTST benchmarking notes).
+Masked self-supervision: patch-level random zeroing plus MSE reconstruction on masked patches.
     """
 
     def __init__(self, configs):
@@ -289,7 +289,7 @@ Prepare input:
         num_patches_cur = math.ceil((T_cur - self.patch_len + self.stride) / self.stride)
 
         if self.patchtst_style_masking:
-            # PatchTST §3.2: Fixed ratio + uniformrandom patch index (non-blockmask)
+            # Fixed-ratio uniform random patch masking (non-block mask)
             mask_map, _, _ = random_patch_masking_patchtst_uniform(
                 B=B,
                 num_patches=num_patches_cur,
@@ -297,7 +297,7 @@ Prepare input:
                 device=device,
             )
         else:
-            # DINOv3 style: ratio interval + blockmask hybrid
+            # Ratio interval + block-biased masking
             mask_map, _, _ = random_patch_masking_dinov3_style(
                 B=B,
                 mask_ratio_tuple=(mv1, mv2),

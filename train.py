@@ -201,7 +201,7 @@ parser.add_argument(
     '--n_cls_tokens',
     type=int,
     default=1,
-    help='CLS token count; >1 uses Qwen-style sigmoid gated fusion before DINO head (default 1 old ckpt)',
+    help='CLS token count; >1 uses sigmoid-gated fusion before the sequence-state head',
 )
 parser.add_argument('--evidence_gap_distill', type=int, default=0, help='1: use single-teacher evidence-gap CLS distillation (TED); 0: off (default for MSM/NTP; TED scripts set this to 1)')
 parser.add_argument('--evidence_gap_teacher_lengths', type=str, default='61,122,183,244,366,488,732', help='comma-separated teacher window lengths for evidence-gap distillation')
@@ -239,14 +239,14 @@ parser.add_argument('--evidence_gap_independent_fullseq', type=int, default=0, h
 parser.add_argument('--evidence_gap_same_short_multi_teacher_prob', type=float, default=0.25, help='train-time probability to add same-short multi-teacher anchor rows per step')
 parser.add_argument('--evidence_gap_same_short_multi_teacher_count', type=int, default=1, help='number of alternate teacher windows paired with a reused crop short z per anchor step')
 parser.add_argument('--evidence_gap_same_short_anchor_from_crop_only', type=int, default=1, help='1: anchor same-short multi-teacher only from crop short views; 0: allow any short row (crop only implemented for now)')
-parser.add_argument('--evidence_gap_dual_teacher_cross', type=int, default=0, help='1: sample two same-length teacher windows and DINO-style cross-view pairing (2 global + n_short_crop+n_short_random shorts per side)')
+parser.add_argument('--evidence_gap_dual_teacher_cross', type=int, default=0, help='1: sample two same-length teacher windows and form cross-window sequence-state pairs')
 parser.add_argument('--evidence_gap_dual_teacher_short_per_side', type=int, default=4, help='legacy fallback: crop-only shorts per teacher window when dual_teacher_cross=1 and n_short_crop=n_short_random=0')
-parser.add_argument('--evidence_gap_dual_teacher_patch_cross', type=int, default=1, help='1: iBOT patch loss uses cross-window teacher targets (default dualT2); 0: same-window patch pairing while CLS may stay cross')
+parser.add_argument('--evidence_gap_dual_teacher_patch_cross', type=int, default=1, help='1: patch-state loss uses cross-window teacher targets; 0: same-window patch pairing while sequence state may stay cross-window')
 parser.add_argument(
     '--evidence_gap_drop_global_cls',
     type=int,
     default=0,
-    help='1: exclude global student CLS rows from evidence-gap DINO CE (keep short/anchor CLS); global forward still runs for iBOT if lambda_patch_proto>0',
+    help='1: exclude global student rows from evidence-to-context sequence-state CE; global forward still runs for patch-state supervision if lambda_patch_proto>0',
 )
 parser.add_argument(
     '--ibot_target_mode',
@@ -281,14 +281,14 @@ parser.add_argument(
     help='jepa_block mode: number of contiguous target blocks per masked sample',
 )
 parser.add_argument('--evidence_gap_version', type=str, default='v2', choices=['v2', 'v2.5', 'v3', 'v4'], help='condition builder: v2=ratio+position in teacher window; v2.5=ratio+timeline offset; v4=teacher scale + timeline offset')
-parser.add_argument('--dino_head_n_prototypes', type=int, default=256, help='number of prototypes in DINO head')
-parser.add_argument('--dino_head_hidden_dim', type=int, default=128, help='hidden dimension in DINO head')
-parser.add_argument('--dino_head_bottleneck_dim', type=int, default=64, help='bottleneck dimension in DINO head')
-parser.add_argument('--dino_head_nlayers', type=int, default=3, help='number of layers in DINO head')
-parser.add_argument('--ibot_head_n_prototypes', type=int, default=256, help='number of prototypes in iBOT head')
-parser.add_argument('--ibot_head_hidden_dim', type=int, default=128, help='hidden dimension in iBOT head')
-parser.add_argument('--ibot_head_bottleneck_dim', type=int, default=64, help='bottleneck dimension in iBOT head')
-parser.add_argument('--ibot_head_nlayers', type=int, default=3, help='number of layers in iBOT head')
+parser.add_argument('--dino_head_n_prototypes', type=int, default=256, help='number of categorical states in the sequence-state head')
+parser.add_argument('--dino_head_hidden_dim', type=int, default=128, help='hidden dimension in the sequence-state head')
+parser.add_argument('--dino_head_bottleneck_dim', type=int, default=64, help='bottleneck dimension in the sequence-state head')
+parser.add_argument('--dino_head_nlayers', type=int, default=3, help='number of layers in the sequence-state head')
+parser.add_argument('--ibot_head_n_prototypes', type=int, default=256, help='number of categorical states in the patch-state head')
+parser.add_argument('--ibot_head_hidden_dim', type=int, default=128, help='hidden dimension in the patch-state head')
+parser.add_argument('--ibot_head_bottleneck_dim', type=int, default=64, help='bottleneck dimension in the patch-state head')
+parser.add_argument('--ibot_head_nlayers', type=int, default=3, help='number of layers in the patch-state head')
 parser.add_argument('--teacher_temp', type=float, default=0.07, help='teacher temperature (final value)')
 parser.add_argument('--warmup_teacher_temp', type=float, default=0.04, help='warmup teacher temperature (initial value)')
 parser.add_argument('--warmup_teacher_temp_epochs', type=int, default=30, help='warmup epochs for teacher temperature')
@@ -324,10 +324,10 @@ parser.add_argument(
     type=str,
     default='per_view',
     choices=['per_view', 'bag', 'crop_set'],
-    help='local CLS vs teacher: '
-    'per_view = standard DINOLoss over local×teacher crops; '
-    'bag = logmeanexp bag over crop locals vs mean teacher prob (see cls_local_bag_loss); '
-    'crop_set = set-posterior pool over crop views + optional per-crop anchor (see crop_view_loss). '
+    help='local evidence vs teacher context: '
+    'per_view = sequence-state CE over local evidence and teacher context windows; '
+    'bag = logmeanexp bag over crop evidence windows vs mean teacher state (see cls_local_bag_loss); '
+    'crop_set = set-posterior pool over crop evidence windows + optional per-crop anchor (see crop_view_loss). '
     'bag/crop_set auto-split crop vs random locals when cls_data provides counts.',
 )
 parser.add_argument(
@@ -448,18 +448,18 @@ parser.add_argument(
     help='dinov3_v2 only: teacher_temp cosine segment epochs (default None)',
 )
 
-# PatchTST
+# MSM patch masking
 
 parser.add_argument('--patch_len', type=int, default=31, help='patch length')
 parser.add_argument('--stride', type=int, default=31, help='stride')
 
 parser.add_argument('--mask_rate', type=float, default=0.8, help='mask ratio (for input-level masking)')
-parser.add_argument('--mask_rate_v1', type=float, default=0.3, help='min patch mask ratio for TED (DINOv3-style masking)')
+parser.add_argument('--mask_rate_v1', type=float, default=0.3, help='min patch mask ratio for TED patch-state supervision')
 parser.add_argument(
     '--patchtst_style_masking',
     type=int,
     default=1,
-    help='MSM: 1=uniform random patch masking (PatchTST-style); 0=legacy DINOv3-style',
+    help='MSM: 1=uniform random patch masking; 0=contiguous block-biased masking',
 )
 parser.add_argument(
     '--patchtst_mask_ratio',
@@ -467,12 +467,12 @@ parser.add_argument(
     default=0.4,
     help='MSM: fraction of patches masked when patchtst_style_masking=1',
 )
-parser.add_argument('--mask_rate_v2', type=float, default=0.6, help='max patch mask ratio for TED (DINOv3-style masking)')
+parser.add_argument('--mask_rate_v2', type=float, default=0.6, help='max patch mask ratio for TED patch-state supervision')
 parser.add_argument(
     '--mask_sample_probability',
     type=float,
     default=0.5,
-    help='fraction of global student rows that use patch masking (DINO-style: not every view is masked); set 1.0 to mask all rows',
+    help='fraction of global student rows that use patch-state masking; set 1.0 to mask all rows',
 )
 parser.add_argument(
     '--local_view_patch_divisor',
@@ -580,7 +580,7 @@ parser.add_argument(
     '--batch_size',
     type=int,
     default=256,
-    help='per-process (per-GPU) train batch size; global batch is this × world_size under DDP (DINOv3: batch_size_per_gpu)',
+    help='per-process train batch size; global batch is this x world_size under DDP',
 )
 parser.add_argument('--patience', type=int, default=10, help='early stopping patience')
 parser.add_argument('--learning_rate', type=float, default=0.001, help='base learning rate (will be scaled by batch size)')
@@ -588,7 +588,7 @@ parser.add_argument(
     '--max_grad_norm',
     type=float,
     default=1.0,
-    help='grad clip threshold; default 1.0. Use --max_grad_norm 30 to match DINOv3 clip_grad~30',
+    help='grad clip threshold; default 1.0',
 )
 parser.add_argument('--scaling_rule', type=str, default='sqrt_wrt_1024', help='LR scaling rule: sqrt_wrt_1024, linear_wrt_256, or none')
 
@@ -608,7 +608,7 @@ parser.add_argument('--weight_decay', type=float, default=1e-4, help='weight dec
 # loss weight params
 
 parser.add_argument('--lambda_fft_align', type=float, default=0, help=(
-    'Peak FFT Gram coefficient when fft_align_warmup_epochs>0 (value at end of warmup); '
+    'Peak frequency-domain patch-alignment coefficient when fft_align_warmup_epochs>0 (value at end of warmup); '
     'otherwise base lambda (optionally gated by fft_align_epoch_*).'
 ))
 parser.add_argument('--fft_align_epoch_start', type=int, default=-1,
@@ -633,56 +633,56 @@ parser.add_argument(
     '--fft_align_lambda_start',
     type=float,
     default=0.0,
-    help='FFT Gram coefficient at epoch 1 when fft_align_warmup_epochs>0 (before ramp to peak).',
+    help='frequency-domain patch-alignment coefficient at epoch 1 when fft_align_warmup_epochs>0.',
 )
 parser.add_argument(
     '--fft_align_lambda_end',
     type=float,
     default=0.0,
-    help='FFT Gram coefficient at final epoch after warmup when fft_align_warmup_epochs>0.',
+    help='frequency-domain patch-alignment coefficient at final epoch after warmup when fft_align_warmup_epochs>0.',
 )
 parser.add_argument(
     '--fft_align_all_patches',
     action='store_true',
-    help='Use legacy all-patch FFT Gram over the aligned student/teacher windows. '
-    'Default (flag off): only masked patches (same support as iBOT / patch loss), as a spectral regularizer.',
+    help='Use all patches for frequency-domain alignment over aligned student/teacher windows. '
+    'Default (flag off): only masked patches, with the same support as patch-state supervision.',
 )
 parser.add_argument(
     '--fft_align_gram_mse_f_ref_bins',
     type=int,
     default=0,
-    help='FFT Gram MSE rescale: 0=full-length F_ref from seq_len/patch/stride, loss * min(1,(F_act/F_ref)^2),'
+    help='frequency-domain alignment rescale: 0=full-length F_ref from seq_len/patch/stride, loss * min(1,(F_act/F_ref)^2),'
     'decouple mean vs F for comparable micro-steps; full length scale=1; <0 disables',
 )
 parser.add_argument(
     '--fft_align_freq_keep_ratio',
     type=float,
     default=1.0,
-    help='ratio-based low-frequency keep for FFT align Gram, applied on active bins F_act after DC removal (0,1]; 1.0 keeps all',
+    help='ratio-based low-frequency keep for frequency-domain patch alignment, applied on active bins F_act after DC removal (0,1]; 1.0 keeps all',
 )
 parser.add_argument(
     '--fft_align_freq_min_bins',
     type=int,
     default=1,
-    help='minimum kept frequency bins for FFT align after ratio truncation',
+    help='minimum kept frequency bins for frequency-domain patch alignment after ratio truncation',
 )
 parser.add_argument(
     '--fft_align_freq_max_bins',
     type=int,
     default=0,
-    help='maximum kept frequency bins for FFT align after ratio truncation; <=0 means no upper bound',
+    help='maximum kept frequency bins for frequency-domain patch alignment after ratio truncation; <=0 means no upper bound',
 )
 parser.add_argument('--lambda_cls_proto', type=float, default=1, help='lambda cls proto')
 parser.add_argument('--lambda_patch_proto', type=float, default=0.2, help='lambda patch proto')
 parser.add_argument('--lambda_koleo', type=float, default=0.05, help='lambda koleo')
 parser.add_argument('--lambda_temporal', type=float, default=0.05, help='lambda temporal')
 
-# FFT / masking / imputator related additional controls
+# Frequency-domain alignment / masking / imputator related additional controls
 parser.add_argument(
     '--fft_align_min_valid_ratio',
     type=float,
     default=0.0,
-    help='only compute FFT Gram (lambda_fft_align) when per-sample raw valid ratio '
+    help='only compute frequency-domain patch alignment when per-sample raw valid ratio '
     '(~missing_mask_orig) >= this; <=0 disables gating (use all valid_sample rows)',
 )
 parser.add_argument(
@@ -692,14 +692,14 @@ parser.add_argument(
     help='TED / MSM / NTP: per-sample raw valid ratio '
     '(~missing_mask_orig.mean) must be >= this to join SSL loss; 0 keeps all samples',
 )
-# Option 2: FFT alignment frequency-bin cutoff ratio
+# Option 2: frequency-domain alignment frequency-bin cutoff ratio
 
-# Option 3: DINOv3 patch mask block masking ratio (rest random)
+# Option 3: block-biased patch masking ratio (rest random)
 parser.add_argument(
     '--block_mask_ratio',
     type=float,
     default=0.8,
-    help='ratio of block-masked patches in DINOv3-style masking (default 0.8)',
+    help='ratio of block-masked patches in block-biased masking (default 0.8)',
 )
 # Option 4: down-weight patch loss at imputator-filled positions
 parser.add_argument(
@@ -708,13 +708,13 @@ parser.add_argument(
     default=1.0,
     help='relative weight for patches that contain imputed (originally missing) positions in patch loss (1.0 = no reweighting)',
 )
-# iBOT: include all-missing patches in loss (when no imputator or mode!=full; full keeps all)
+# Patch-state supervision: include all-missing patches in the loss when requested
 parser.add_argument(
     '--ibot_patch_reliable_mode',
     type=str,
     default='filter',
     choices=['filter', 'keep_all'],
-    help='filter: only patch memory in at least one original valid observationwhenparticipate in iBOT (patch_valid_ratio_orig>0, and legacyconsistent); keep_all: no filter',
+    help='filter: only patch states with at least one original valid observation participate in patch-state supervision; keep_all: no filter',
 )
 parser.add_argument(
     '--lambda_cls_cons',
