@@ -4,6 +4,9 @@ Temporal Earth Distillation for pixel-based satellite image time series pre-trai
 
 ![Temporal Earth Distillation overview](docs/figures/figure1_intro_composite_300dpi.jpg)
 
+**Figure 1 | Emergent semantic divergence and practical temporal embeddings.**
+**a,** Semantic-state divergence across sequence lengths for trajectories selected by interannual normalised difference vegetation index (NDVI) variability. Basic TSD denotes basic temporal self-distillation; both Basic TSD and TED use the Small model and 20% of the pre-training data in this comparison. JSD denotes Jensen-Shannon divergence between the five most probable categorical semantic states. **b,** First three principal components of TED embeddings. Crop labels are from the United States Department of Agriculture Cropland Data Layer; the red outline in the wildfire scenario is the 2021 Dixie Fire perimeter from the California Fire and Resource Assessment Program.
+
 ## Requirements
 
 Python **≥ 3.10**. Install:
