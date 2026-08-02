@@ -24,7 +24,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-spatial = ["pyproj>=3.5"]
 reformer = ["reformer_pytorch"]
 
 [tool.setuptools]

@@ -43,10 +43,6 @@ Python **≥ 3.10**. Install:
 ```bash
 cd temporal_earth_distillation
 pip install -r requirements.txt
-
-# optional: more accurate UTM for spatial 1280 m splits
-pip install -r requirements.txt -r requirements-optional.txt
-# or: pip install '.[spatial]'
 ```
 
 | Package | Role |
@@ -56,7 +52,6 @@ pip install -r requirements.txt -r requirements-optional.txt
 | `h5py`, `netCDF4` | HLS / classification NetCDF (HDF5-backed) |
 | `einops` | transformer blocks |
 | `matplotlib` | training curves |
-| `pyproj` (optional) | UTM projection for spatial splits (approx fallback exists) |
 
 GPU training expects CUDA-enabled PyTorch matching your driver.
 
