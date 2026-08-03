@@ -15,3 +15,4 @@ This folder contains the downstream event-localization datasets used to evaluate
 
 - `LandTD` denotes the manually reviewed land-transition diagnostic dataset used in the paper.
 - `manifest.json` records the current paper-aligned paths and target fields. Example visualizations are shown in `../../../docs/downstream_datasets.md`.
+- Use of bundled artifacts follows the unpublished-manuscript and source-data terms summarized in `../../../NOTICE.md`.

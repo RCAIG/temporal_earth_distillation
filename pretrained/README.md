@@ -2,7 +2,7 @@
 
 This folder stores Hugging Face-style metadata for the paper-aligned full-scale **12b768** checkpoints. Model weights are not bundled in git at this stage.
 
-Model checkpoints will be made available upon publication. For peer review, access can be provided to editors and reviewers upon request.
+The accompanying manuscript is unpublished. Model checkpoints will be made available upon publication. For peer review, access can be provided to editors and reviewers upon request.
 
 | ID / alias | Family | Metadata | Expected weight path |
 |------------|--------|----------|----------------------|

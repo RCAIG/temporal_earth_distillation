@@ -30,18 +30,22 @@ Change-detection artifacts are in `dataset/downstream/change_detection/`:
 
 ## Dataset Visualizations
 
-![Stable reference and land-cover transition examples](figures/stable_vs_change_examples_300dpi.png)
+![Stable reference and land-cover transition examples](figures/land_state_transition_examples_300dpi.png)
 
 **Stable reference and land-cover transition examples.** Representative HLS time series are shown for stable reference samples and land-cover transition samples. Red vertical lines mark annotated transition dates.
 
-![Change-detection examples](figures/change_detection_examples_blue_swir1_ndvi.png)
+![Change-detection examples](figures/change_detection_hls_trajectory_examples.png)
 
 **Change-detection examples.** Example HLS trajectories used to inspect event timing and spectral behaviour around annotated changes.
 
 ## Imputation Examples
 
-![Imputation example 1](figures/imputation_example_seq_0001.png)
+![Imputation example 1](figures/missing_observation_imputation_example_1.png)
 
-![Imputation example 2](figures/imputation_example_seq_0008.png)
+![Imputation example 2](figures/missing_observation_imputation_example_2.png)
 
 **Imputation examples.** Example trajectories show raw observations, artificially masked observations and the output of the separately trained imputator used in the missingness/imputation analysis.
+
+## Copyright and Use
+
+These visualizations and bundled evaluation artifacts accompany an unpublished manuscript. They are provided for review and reproducibility, not as standalone open-license datasets or reusable publication figures. Source datasets retain their own licenses and citation requirements; see `../NOTICE.md`.

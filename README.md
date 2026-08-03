@@ -2,7 +2,7 @@
 
 Temporal Earth Distillation for pixel-based satellite image time series pre-training and downstream Earth observation tasks.
 
-![Temporal Earth Distillation overview](docs/figures/figure1_intro_composite_300dpi.jpg)
+![Temporal Earth Distillation overview](docs/figures/manuscript_figure_1_overview_300dpi.jpg)
 
 **Figure 1 | Emergent semantic divergence and practical temporal embeddings.**
 **a,** Semantic-state divergence across sequence lengths for trajectories selected by interannual normalised difference vegetation index (NDVI) variability. Basic TSD denotes basic temporal self-distillation; both Basic TSD and TED use the Small model and 20% of the pre-training data in this comparison. JSD denotes Jensen-Shannon divergence between the five most probable categorical semantic states. **b,** First three principal components of TED embeddings. Crop labels are from the United States Department of Agriculture Cropland Data Layer; the red outline in the wildfire scenario is the 2021 Dixie Fire perimeter from the California Fire and Resource Assessment Program.
@@ -158,14 +158,18 @@ This repository accompanies the Temporal Earth Distillation manuscript and provi
 
 ## Citation
 
-Please cite the project using `CITATION.cff`. A manuscript BibTeX entry will be added after publication.
+Please cite the project using `CITATION.cff`. The accompanying manuscript is unpublished; a manuscript BibTeX entry will be added after publication.
 
 ## Data and Code Availability
 
 Code, configuration files and downstream evaluation artifacts are maintained in this repository. Model checkpoints will be made available upon publication. For peer review, access can be provided to editors and reviewers upon request. Large pretrained weights and HLS pre-training files are not stored directly in git; use `pretrained/README.md` and `dataset/README.md` for the expected file layout.
 
+## Copyright and Use
+
+Source code is released under the MIT license. Downstream evaluation artifacts, manuscript figures and documentation are provided for reproducibility and review of an unpublished manuscript, and should not be redistributed or reused as standalone datasets or publication figures before the manuscript is published without permission from the authors. Derived products retain the terms of their original data sources; see `NOTICE.md` for details.
+
 ## Notes
 
 - `train.py` is train-only (`if __name__ == "__main__"`). The public data loaders are scoped to HLS satellite image time series.
 - TED-specific flags default off; paper TED recipes set them in `scripts/train_ted_*.sh`.
-- License: MIT (`LICENSE`). Citation: `CITATION.cff`.
+- Code license: MIT (`LICENSE`). Data and figure use: `NOTICE.md`. Citation: `CITATION.cff`.

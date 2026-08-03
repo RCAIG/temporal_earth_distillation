@@ -13,6 +13,8 @@ Files may be classic NetCDF4 or HDF5-backed `.nc` files.
 
 Paper-aligned downstream artifacts are bundled under `dataset/downstream/`. See `../docs/downstream_datasets.md` for the paper dataset table and example visualizations.
 
+These artifacts accompany an unpublished manuscript and are provided for review and reproducibility. Source datasets retain their own licenses and citation requirements; see `../NOTICE.md`.
+
 ### Classification
 
 Location: `dataset/downstream/classification/`
