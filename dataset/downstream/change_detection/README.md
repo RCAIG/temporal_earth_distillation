@@ -13,6 +13,5 @@ This folder contains the downstream event-localization datasets used to evaluate
 
 ## Notes
 
-- The task is named change detection to match the paper; older internal folders used `segmentation` for the same event-localization workflow.
 - `LandTD` denotes the manually reviewed land-transition diagnostic dataset used in the paper.
-- `manifest.json` records the current paper-aligned paths and target fields.
+- `manifest.json` records the current paper-aligned paths and target fields. Example visualizations are shown in `../../../docs/downstream_datasets.md`.

@@ -93,7 +93,7 @@ Paper-aligned downstream artifacts are bundled under `dataset/downstream/`:
 - `change_detection/*_hls_change_detection.npz`
 - `change_detection/hls_composite_nc/*_hls_change_detection_processed.nc`
 
-The classification datasets are LCMAP, GlanCE, GlobalTree, CDL and CropHarvest. The change-detection datasets are Hansen, Wildfire, LCMAP-C and LandTD.
+The classification datasets are LCMAP, GlanCE, GlobalTree, CDL and CropHarvest. The change-detection datasets are Hansen, Wildfire, LCMAP-C and LandTD. See `docs/downstream_datasets.md` for the paper dataset table and example visualizations.
 
 ## Train
 
@@ -162,7 +162,7 @@ Please cite the project using `CITATION.cff`. A manuscript BibTeX entry will be 
 
 ## Data and Code Availability
 
-Code, configuration files and downstream evaluation artifacts are maintained in this repository. Large pretrained weights and HLS pre-training files are not stored directly in git; use `pretrained/README.md` and `dataset/README.md` for the expected file layout.
+Code, configuration files and downstream evaluation artifacts are maintained in this repository. Model checkpoints will be made available upon publication. For peer review, access can be provided to editors and reviewers upon request. Large pretrained weights and HLS pre-training files are not stored directly in git; use `pretrained/README.md` and `dataset/README.md` for the expected file layout.
 
 ## Notes
 

@@ -16,5 +16,4 @@ This folder contains the five classification datasets used for downstream evalua
 
 - HLS composites are the pixel-based satellite image time series used by TED/MSM/NTP encoders.
 - AlphaEarth NPZ files store the spatial-multimodal baseline features used for comparison and fusion analyses.
-- Filenames use the paper-facing model name `alphaearth`; older internal exports may have used `alphaearth`.
 - `manifest.json` records the current paper-aligned paths.

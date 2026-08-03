@@ -1,26 +1,23 @@
-# Pretrained checkpoints
+# Pretrained Checkpoints
 
-Hugging Face-style model zoo for paper-aligned full-scale **12b768** checkpoints.
+This folder stores Hugging Face-style metadata for the paper-aligned full-scale **12b768** checkpoints. Model weights are not bundled in git at this stage.
 
-| ID / alias | Family | Released checkpoint | Weights |
-|------------|--------|---------------------|---------|
-| `ted` / `ted-hls-12b768` | Temporal Earth Distillation | paper release | `ted-hls-12b768/pytorch_model.bin` |
-| `msm` / `msm-hls-12b768` | Masked Sequence Modeling | paper baseline | `msm-hls-12b768/pytorch_model.bin` |
-| `ntp` / `ntp-hls-12b768` | Next-Token Prediction | paper baseline | `ntp-hls-12b768/pytorch_model.bin` |
+Model checkpoints will be made available upon publication. For peer review, access can be provided to editors and reviewers upon request.
 
-Each folder contains:
+| ID / alias | Family | Metadata | Expected weight path |
+|------------|--------|----------|----------------------|
+| `ted` / `ted-hls-12b768` | Temporal Earth Distillation | `ted-hls-12b768/config.json` | `ted-hls-12b768/pytorch_model.bin` |
+| `msm` / `msm-hls-12b768` | Masked Sequence Modeling | `msm-hls-12b768/config.json` | `msm-hls-12b768/pytorch_model.bin` |
+| `ntp` / `ntp-hls-12b768` | Next-Token Prediction | `ntp-hls-12b768/config.json` | `ntp-hls-12b768/pytorch_model.bin` |
 
-- `config.json` - architecture and release metadata
-- `pytorch_model.bin` - `torch.save` state dict
-- `checkpoint.pth` - symlink to the weight file
-
-Weights are large and gitignored. Restore / detach hardlinks with:
+Each folder currently contains `config.json` with architecture and release metadata. When weights are available, place `pytorch_model.bin` under the matching folder. The helper script can restore weights from a local release bundle:
 
 ```bash
 bash scripts/ensure_pretrained_weights.sh
+# optional: PRETRAINED_BUNDLE=/path/to/pretrained_release
 ```
 
-## Downstream usage
+## Downstream Usage
 
 ```bash
 # short alias

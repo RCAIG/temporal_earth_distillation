@@ -11,7 +11,7 @@ Files may be classic NetCDF4 or HDF5-backed `.nc` files.
 
 ## Downstream Evaluation Data
 
-Paper-aligned downstream artifacts are bundled under `dataset/downstream/`.
+Paper-aligned downstream artifacts are bundled under `dataset/downstream/`. See `../docs/downstream_datasets.md` for the paper dataset table and example visualizations.
 
 ### Classification
 
