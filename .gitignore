@@ -58,3 +58,6 @@ TimeSeries_SSL_USA/
 analysis/TimeSeries_SSL_USA_all_py*/
 relation_condition_changed_py*/
 bundle_*/
+# Public downstream evaluation artifacts bundled with the paper release
+!dataset/downstream/**/*.npz
+!dataset/downstream/**/*.nc

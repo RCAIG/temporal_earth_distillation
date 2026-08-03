@@ -55,7 +55,7 @@ from utils.pretrained import list_pretrained, resolve_pretrained  # noqa: E402
 
 ALL5 = (
     "LCMAP_Classification",
-    "GlanceTraining_Classification",
+    "GlanCE_Classification",
     "GlobalTree_Classification",
     "CDL_Classification",
     "CropHarvest_Classification",
@@ -63,8 +63,7 @@ ALL5 = (
 
 SHORT = {
     "lcmap": "LCMAP_Classification",
-    "glancetraining": "GlanceTraining_Classification",
-    "glance": "GlanceTraining_Classification",
+    "glance": "GlanCE_Classification",
     "globaltree": "GlobalTree_Classification",
     "cdl": "CDL_Classification",
     "cropharvest": "CropHarvest_Classification",

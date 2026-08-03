@@ -816,14 +816,14 @@ class Dataset_CDL_Classification(IterableDataset):
 
 
 
-class Dataset_GlanceTraining_Classification(IterableDataset):
+class Dataset_GlanCE_Classification(IterableDataset):
     def __init__(self, root_path, flag='train', size=None,
                  features='M', data_path='', scale=True,
                  timeenc=1, freq='d', sampling_stride=None, batch_size=1000, disable_ddp_split=False,
                  seq_window_align: str = 'start'):
         super().__init__()
         """
-        Overall logic (GlanceTraining classification + kNN probe):
+        Overall logic (GlanCE classification + kNN probe):
         1) Sequence length
            - seq_len from size[0] (aligned with backbone args.seq_len, e.g. 366 / 732);
            - If size is empty, default seq_len = 366.
@@ -844,7 +844,7 @@ class Dataset_GlanceTraining_Classification(IterableDataset):
            - Return (batch_x, batch_x_mark, labels), where:
                * batch_x: [B, seq_len, C]；
                * batch_x_mark: [B, seq_len, time_feat]；
-               * labels: [B], remapped class_ids for GlanceTraining.
+               * labels: [B], remapped class_ids for GlanCE.
         6) kNN usage
            - Feed batch_x / batch_x_mark into model.encode(...),
              use outputs['cls_token'] for kNN (and optionally a raw-mean baseline).
@@ -876,7 +876,7 @@ class Dataset_GlanceTraining_Classification(IterableDataset):
         self.freq = freq
         # sampling_stride defaults to seq_len (non-overlapping) when omitted
         self.stride = sampling_stride if sampling_stride is not None else self.seq_len
-        print(f">>> [Dataset_GlanceTraining_Classification] seq_len: {self.seq_len}, stride: {self.stride}, sampling_stride param: {sampling_stride}")
+        print(f">>> [Dataset_GlanCE_Classification] seq_len: {self.seq_len}, stride: {self.stride}, sampling_stride param: {sampling_stride}")
         self.root_path = root_path
         # self.data_path = data_path
         self.batch_size = batch_size
@@ -886,11 +886,11 @@ class Dataset_GlanceTraining_Classification(IterableDataset):
     def __read_data__(self):
         # 1. Resolve file path / type (legacy + new names)
         h5_candidates = [
-            os.path.join(self.root_path, "glancetraining_classification_dataset.h5"),
+            os.path.join(self.root_path, "glance_classification_dataset.h5"),
         ]
         nc_candidates = [
-            os.path.join(self.root_path, "glancetraining_hls_classification_processed.nc"),
-            os.path.join(self.root_path, "glancetraining_classification_dataset.nc"),
+            os.path.join(self.root_path, "glance_hls_classification_processed.nc"),
+            os.path.join(self.root_path, "glance_classification_dataset.nc"),
         ]
 
         self.file_type = None
@@ -976,7 +976,7 @@ class Dataset_GlanceTraining_Classification(IterableDataset):
         self.num_batches = (self.num_pixels + self.batch_size - 1) // self.batch_size
         self.batch_indices = list(range(self.num_batches))
         
-        print(f">>> [Dataset_GlanceTraining_Classification] fixed-length read mode:")
+        print(f">>> [Dataset_GlanCE_Classification] fixed-length read mode:")
         print(f"    time_steps={self.time_steps}, seq_len={self.seq_len}")
         print(f"    seq_window_align={self.seq_window_align}")
         print(f"    windows_per_sample=1 (no sliding window)")

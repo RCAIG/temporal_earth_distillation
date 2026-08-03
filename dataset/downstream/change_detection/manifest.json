@@ -1,0 +1,31 @@
+{
+  "layout": "dataset/downstream/change_detection",
+  "task": "downstream change detection",
+  "datasets": {
+    "Hansen": {
+      "event_npz": "dataset/downstream/change_detection/hansen_hls_change_detection.npz",
+      "hls_composite": "dataset/downstream/change_detection/hls_composite_nc/hansen_hls_change_detection_processed.nc"
+    },
+    "Wildfire": {
+      "event_npz": "dataset/downstream/change_detection/wildfire_hls_change_detection.npz",
+      "hls_composite": "dataset/downstream/change_detection/hls_composite_nc/wildfire_hls_change_detection_processed.nc"
+    },
+    "LCMAP-C": {
+      "event_npz": "dataset/downstream/change_detection/lcmap_c_hls_change_detection.npz",
+      "hls_composite": "dataset/downstream/change_detection/hls_composite_nc/lcmap_c_hls_change_detection_processed.nc"
+    },
+    "LandTD": {
+      "event_npz": "dataset/downstream/change_detection/landtd_hls_change_detection.npz",
+      "hls_composite": "dataset/downstream/change_detection/hls_composite_nc/landtd_hls_change_detection_processed.nc"
+    }
+  },
+  "target_fields": [
+    "num_change_points",
+    "change_date_1",
+    "change_date_2",
+    "change_year_1",
+    "change_year_2",
+    "lon",
+    "lat"
+  ]
+}

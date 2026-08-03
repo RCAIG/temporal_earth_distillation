@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from data.downstream_datasets import (
     Dataset_CDL_Classification,
     Dataset_CropHarvest_Classification,
-    Dataset_GlanceTraining_Classification,
+    Dataset_GlanCE_Classification,
     Dataset_GlobalTree_Classification,
     Dataset_LCMAP_Classification,
 )
@@ -17,10 +17,10 @@ from data.downstream_datasets import (
 # Shareable package layout:
 #   dataset/downstream/classification/
 #     hls_composite_nc/*.nc
-#     *_hls_classification.npz  (lon/lat helpers for spatial splits)
+#     *_alphaearth_classification.npz  (AlphaEarth features and lon/lat fallback)
 DOWNSTREAM_SUBPATHS = {
     "LCMAP_Classification": ("hls_composite_nc/", ""),
-    "GlanceTraining_Classification": ("hls_composite_nc/", ""),
+    "GlanCE_Classification": ("hls_composite_nc/", ""),
     "GlobalTree_Classification": ("hls_composite_nc/", ""),
     "CDL_Classification": ("hls_composite_nc/", ""),
     "CropHarvest_Classification": ("hls_composite_nc/", ""),
@@ -28,7 +28,7 @@ DOWNSTREAM_SUBPATHS = {
 
 _DATASETS = {
     "LCMAP_Classification": Dataset_LCMAP_Classification,
-    "GlanceTraining_Classification": Dataset_GlanceTraining_Classification,
+    "GlanCE_Classification": Dataset_GlanCE_Classification,
     "GlobalTree_Classification": Dataset_GlobalTree_Classification,
     "CDL_Classification": Dataset_CDL_Classification,
     "CropHarvest_Classification": Dataset_CropHarvest_Classification,
@@ -115,8 +115,8 @@ def _build_provider(task_name: str, default_stride: int):
 
 
 data_provider_LCMAP_Classification = _build_provider("LCMAP_Classification", 366)
-data_provider_GlanceTraining_Classification = _build_provider(
-    "GlanceTraining_Classification", 366
+data_provider_GlanCE_Classification = _build_provider(
+    "GlanCE_Classification", 366
 )
 data_provider_GlobalTree_Classification = _build_provider(
     "GlobalTree_Classification", 244
@@ -128,7 +128,7 @@ data_provider_CropHarvest_Classification = _build_provider(
 
 PROVIDERS = {
     "LCMAP_Classification": data_provider_LCMAP_Classification,
-    "GlanceTraining_Classification": data_provider_GlanceTraining_Classification,
+    "GlanCE_Classification": data_provider_GlanCE_Classification,
     "GlobalTree_Classification": data_provider_GlobalTree_Classification,
     "CDL_Classification": data_provider_CDL_Classification,
     "CropHarvest_Classification": data_provider_CropHarvest_Classification,

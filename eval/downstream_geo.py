@@ -35,11 +35,11 @@ _CLASSIFICATION_FILES: dict[str, tuple[list[str], list[str]]] = {
         ["lcmap_classification_dataset.h5"],
         ["lcmap_hls_classification_processed.nc", "lcmap_classification_dataset.nc"],
     ),
-    "GlanceTraining_Classification": (
-        ["glancetraining_classification_dataset.h5"],
+    "GlanCE_Classification": (
+        ["glance_classification_dataset.h5"],
         [
-            "glancetraining_hls_classification_processed.nc",
-            "glancetraining_classification_dataset.nc",
+            "glance_hls_classification_processed.nc",
+            "glance_classification_dataset.nc",
         ],
     ),
     "GlobalTree_Classification": (
@@ -62,24 +62,22 @@ _CLASSIFICATION_FILES: dict[str, tuple[list[str], list[str]]] = {
     ),
 }
 
-# Composite ``*_processed.nc`` files are HDF5-backed; some datasets keep lon/lat only in NPZ / AEF files.
+# Composite ``*_processed.nc`` files are HDF5-backed; some datasets keep lon/lat only in AlphaEarth NPZ files.
 _LONLAT_NPZ_FALLBACK: dict[str, list[str]] = {
     "LCMAP_Classification": [
-        "lcmap_gse_classification.npz",
-        "lcmap_hls_classification.npz",
+        "lcmap_alphaearth_classification.npz",
     ],
-    "GlanceTraining_Classification": [
-        "glancetraining_gse_classification.npz",
-        "glancetraining_hls_classification.npz",
+    "GlanCE_Classification": [
+        "glance_alphaearth_classification.npz",
     ],
     "GlobalTree_Classification": [
-        "globaltree_hls_classification.npz",
+        "globaltree_alphaearth_classification.npz",
     ],
     "CDL_Classification": [
-        "cdl_hls_classification.npz",
+        "cdl_alphaearth_classification.npz",
     ],
     "CropHarvest_Classification": [
-        "cropharvest_hls_classification.npz",
+        "cropharvest_alphaearth_classification.npz",
     ],
 }
 
@@ -165,7 +163,7 @@ def load_classification_lonlat(downstream_data_root: str, dataset: str) -> tuple
   Load lon/lat aligned with classification DataLoader rows.
 
   Prefer composite HDF5 (``*_processed.nc``), then classification-root ``*.npz``.
-  Fall back to GSE/AEF npz when HLS composite has no lon/lat.
+  Fall back to AlphaEarth NPZ files when HLS composites do not include lon/lat.
     """
     path, _file_type = resolve_classification_file(downstream_data_root, dataset)
     out = _read_lonlat_hdf5(path)

@@ -723,7 +723,7 @@ parser.add_argument(
     help='weight for raw-imputed CLS consistency loss (same sequence, align CLS from raw view and imputed view); 0 to disable',
 )
 
-# supervised classification split / early stopping (LCMAP & GlanceTraining)
+# supervised classification split / early stopping (LCMAP & GlanCE)
 
 # unified K for downstream KNN probes (all knn_probe_* in ExpProbe)
 
