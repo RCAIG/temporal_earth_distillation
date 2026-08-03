@@ -30,7 +30,7 @@ Change-detection artifacts are in `dataset/downstream/change_detection/`:
 
 ## Dataset Visualizations
 
-![Stable reference and land-cover transition examples](figures/land_state_transition_examples_300dpi.png)
+![Stable reference and land-cover transition examples](figures/land_state_transition_examples.png)
 
 **Stable reference and land-cover transition examples.** Representative HLS time series are shown for stable reference samples and land-cover transition samples. Red vertical lines mark annotated transition dates.
 
