@@ -34,7 +34,7 @@ Change-detection artifacts are in `dataset/downstream/change_detection/`:
 
 **Stable reference and land-cover transition examples.** Representative HLS time series are shown for stable reference samples and land-cover transition samples. Red vertical lines mark annotated transition dates.
 
-![Supplementary Figure 1](figures/supplementary_figure_1.png)
+![Supplementary Figure 1](figures/change_detection_examples_band_separated_scatter.png)
 
 **Supplementary Figure 1. Examples of labelled time series with annotated change points.** Each row corresponds to a change-detection dataset, and each column represents a sample point.
 
